@@ -61,6 +61,9 @@ build/
 # Environment
 .env
 
-# Databases
+# Local test databases (not for release)
 tools/databases/
 __pycache__/
+
+# Python virtual environment
+tools/.venv/

@@ -43,6 +43,11 @@ static const char* platform_folders[] = {
     "/dev_hdd0/ROMS/MAME"
 };
 
+#define MAX_URL_LENGTH 512
+
+static char platform_base_urls[PlatformCount][MAX_URL_LENGTH];
+static int sources_loaded = 0;
+
 RomiPlatform romi_parse_platform(const char* str)
 {
     if (!str || !str[0]) return PlatformUnknown;
@@ -125,6 +130,84 @@ static size_t write_update_data(void *buffer, size_t size, size_t nmemb, void *s
     return realsize;
 }
 
+static void load_sources(void)
+{
+    if (sources_loaded)
+        return;
+
+    for (int i = 0; i < PlatformCount; i++)
+        platform_base_urls[i][0] = '\0';
+
+    char data[8192];
+    char path[256];
+    romi_snprintf(path, sizeof(path), "%s/sources.txt", romi_get_config_folder());
+
+    int loaded = romi_load(path, data, sizeof(data) - 1);
+    if (loaded <= 0)
+    {
+        LOG("sources.txt not found at %s, URLs must be full paths in database", path);
+        sources_loaded = 1;
+        return;
+    }
+
+    data[loaded] = '\0';
+    LOG("loading sources from %s", path);
+
+    char* ptr = data;
+    char* end = data + loaded;
+
+    if (loaded > 3 && (uint8_t)ptr[0] == 0xef && (uint8_t)ptr[1] == 0xbb && (uint8_t)ptr[2] == 0xbf)
+        ptr += 3;
+
+    while (ptr < end)
+    {
+        while (ptr < end && (*ptr == ' ' || *ptr == '\t' || *ptr == '\r' || *ptr == '\n' || *ptr == '\0'))
+            ptr++;
+        if (ptr >= end) break;
+
+        if (*ptr == '#')
+        {
+            while (ptr < end && *ptr && *ptr != '\n')
+                ptr++;
+            continue;
+        }
+
+        char* key_start = ptr;
+        while (ptr < end && *ptr && *ptr != ' ' && *ptr != '\t' && *ptr != '\n' && *ptr != '\r')
+            ptr++;
+        if (ptr >= end) break;
+
+        char* key_end = ptr;
+        if (key_start == key_end)
+            continue;
+
+        while (ptr < end && (*ptr == ' ' || *ptr == '\t' || *ptr == '\0'))
+            ptr++;
+        if (ptr >= end || *ptr == '\n' || *ptr == '\r')
+            continue;
+
+        char* value_start = ptr;
+        while (ptr < end && *ptr && *ptr != '\n' && *ptr != '\r')
+            ptr++;
+        char* value_end = ptr;
+
+        while (value_end > value_start && (*(value_end-1) == ' ' || *(value_end-1) == '\t'))
+            value_end--;
+
+        *key_end = '\0';
+        *value_end = '\0';
+
+        RomiPlatform platform = romi_parse_platform(key_start);
+        if (platform != PlatformUnknown && platform < PlatformCount)
+        {
+            romi_strncpy(platform_base_urls[platform], MAX_URL_LENGTH, value_start);
+            LOG("source %s = [%s] (len=%d)", key_start, value_start, (int)romi_strlen(value_start));
+        }
+    }
+
+    sources_loaded = 1;
+}
+
 static int load_tsv_database(const char* path)
 {
     int loaded = romi_load(path, db_data + db_size, MAX_DB_SIZE - db_size - 1);
@@ -163,16 +246,23 @@ static int load_tsv_database(const char* path)
             }
         }
 
-        if (col == TSV_COLUMNS && columns[3] && romi_validate_url(columns[3]))
+        if (col == TSV_COLUMNS && columns[3] && columns[3][0])
         {
-            db[db_count].platform = romi_parse_platform(columns[0]);
-            db[db_count].region = romi_parse_region(columns[1]);
-            db[db_count].name = columns[2];
-            db[db_count].url = columns[3];
-            db[db_count].size = romi_strtoll(columns[4]);
-            db[db_count].presence = PresenceUnknown;
-            db_item[db_count] = &db[db_count];
-            db_count++;
+            RomiPlatform platform = romi_parse_platform(columns[0]);
+            int valid_url = romi_validate_url(columns[3]);
+            int has_base_url = (platform < PlatformCount && platform_base_urls[platform][0] != '\0');
+
+            if (valid_url || has_base_url)
+            {
+                db[db_count].platform = platform;
+                db[db_count].region = romi_parse_region(columns[1]);
+                db[db_count].name = columns[2];
+                db[db_count].url = columns[3];
+                db[db_count].size = romi_strtoll(columns[4]);
+                db[db_count].presence = PresenceUnknown;
+                db_item[db_count] = &db[db_count];
+                db_count++;
+            }
         }
 
         if (db_count >= MAX_DB_ITEMS)
@@ -198,7 +288,7 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
 
     LOG("downloading database from %s", update_url);
 
-    romi_http* http = romi_http_get(update_url, NULL, 0);
+    romi_http* http = romi_http_get(update_url, NULL, 0, 0);
     if (!http)
     {
         romi_snprintf(error, error_size, "%s\n%s", _("failed to download list from"), update_url);
@@ -243,6 +333,8 @@ int romi_db_reload(char* error, uint32_t error_size)
     db_count = 0;
     db_item_count = 0;
 
+    load_sources();
+
     if (!db_data && (db_data = malloc(MAX_DB_SIZE)) == NULL)
     {
         romi_snprintf(error, error_size, "failed to allocate memory for database");
@@ -276,13 +368,21 @@ static void swap(uint32_t a, uint32_t b)
     db_item[b] = temp;
 }
 
-static int matches_filter(const DbItem* item, uint32_t filter)
+static int matches_filter(const DbItem* item, uint32_t filter, RomiPlatform active_platform)
 {
-    uint32_t pf = romi_platform_filter(item->platform);
     uint32_t rf = region_filter(item->region);
-
-    int platform_match = (filter & DbFilterAllPlatforms) == 0 || (filter & pf);
     int region_match = (filter & DbFilterAllRegions) == 0 || (filter & rf);
+
+    int platform_match;
+    if (active_platform != PlatformUnknown)
+    {
+        platform_match = (item->platform == active_platform);
+    }
+    else
+    {
+        uint32_t pf = romi_platform_filter(item->platform);
+        platform_match = (filter & DbFilterAllPlatforms) == 0 || (filter & pf);
+    }
 
     return platform_match && region_match;
 }
@@ -311,10 +411,10 @@ static int compare_items(const DbItem* a, const DbItem* b, DbSort sort, DbSortOr
     return (order == SortAscending) ? cmp : -cmp;
 }
 
-static int lower(const DbItem* a, const DbItem* b, DbSort sort, DbSortOrder order, uint32_t filter)
+static int lower(const DbItem* a, const DbItem* b, DbSort sort, DbSortOrder order, uint32_t filter, RomiPlatform active_platform)
 {
-    int matches_a = matches_filter(a, filter);
-    int matches_b = matches_filter(b, filter);
+    int matches_a = matches_filter(a, filter, active_platform);
+    int matches_b = matches_filter(b, filter, active_platform);
 
     if (matches_a != matches_b)
         return matches_a ? 1 : 0;
@@ -322,22 +422,22 @@ static int lower(const DbItem* a, const DbItem* b, DbSort sort, DbSortOrder orde
     return compare_items(a, b, sort, order) < 0;
 }
 
-static void heapify(uint32_t n, uint32_t index, DbSort sort, DbSortOrder order, uint32_t filter)
+static void heapify(uint32_t n, uint32_t index, DbSort sort, DbSortOrder order, uint32_t filter, RomiPlatform active_platform)
 {
     uint32_t largest = index;
     uint32_t left = 2 * index + 1;
     uint32_t right = 2 * index + 2;
 
-    if (left < n && lower(db_item[largest], db_item[left], sort, order, filter))
+    if (left < n && lower(db_item[largest], db_item[left], sort, order, filter, active_platform))
         largest = left;
 
-    if (right < n && lower(db_item[largest], db_item[right], sort, order, filter))
+    if (right < n && lower(db_item[largest], db_item[right], sort, order, filter, active_platform))
         largest = right;
 
     if (largest != index)
     {
         swap(index, largest);
-        heapify(n, largest, sort, order, filter);
+        heapify(n, largest, sort, order, filter, active_platform);
     }
 }
 
@@ -371,15 +471,15 @@ void romi_db_configure(const char* search, const Config* config)
     }
 
     for (int i = search_count / 2 - 1; i >= 0; i--)
-        heapify(search_count, i, config->sort, config->order, config->filter);
+        heapify(search_count, i, config->sort, config->order, config->filter, config->active_platform);
 
     for (int i = search_count - 1; i >= 0; i--)
     {
         swap(i, 0);
-        heapify(i, 0, config->sort, config->order, config->filter);
+        heapify(i, 0, config->sort, config->order, config->filter, config->active_platform);
     }
 
-    if (config->filter == DbFilterAll)
+    if (config->filter == DbFilterAll && config->active_platform == PlatformUnknown)
     {
         db_item_count = search_count;
     }
@@ -390,7 +490,7 @@ void romi_db_configure(const char* search, const Config* config)
         while (low <= high)
         {
             uint32_t middle = (low + high) / 2;
-            if (matches_filter(db_item[middle], config->filter))
+            if (matches_filter(db_item[middle], config->filter, config->active_platform))
                 low = middle + 1;
             else
             {
@@ -421,4 +521,28 @@ uint32_t romi_db_total(void)
 DbItem* romi_db_get(uint32_t index)
 {
     return index < db_item_count ? db_item[index] : NULL;
+}
+
+const char* romi_db_get_full_url(const DbItem* item, char* buf, size_t size)
+{
+    if (!item || !buf || size == 0)
+        return NULL;
+
+    const char* base = platform_base_urls[item->platform];
+    LOG("get_full_url: platform=%d base=[%s]", item->platform, base ? base : "NULL");
+    if (!base || !base[0])
+    {
+        romi_snprintf(buf, size, "%s", item->url);
+        return buf;
+    }
+
+    if (strncmp(item->url, "http://", 7) == 0 || strncmp(item->url, "https://", 8) == 0)
+    {
+        romi_snprintf(buf, size, "%s", item->url);
+        return buf;
+    }
+
+    romi_snprintf(buf, size, "%s%s", base, item->url);
+    LOG("get_full_url: result=[%s]", buf);
+    return buf;
 }

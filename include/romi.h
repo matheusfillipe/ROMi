@@ -101,7 +101,7 @@ int romi_check_free_space(uint64_t http_length);
 typedef struct romi_http romi_http;
 
 int romi_validate_url(const char* url);
-romi_http* romi_http_get(const char* url, const char* content, uint64_t offset);
+romi_http* romi_http_get(const char* url, const char* content, uint64_t offset, int use_throughput);
 int romi_http_response_length(romi_http* http, int64_t* length);
 int romi_http_read(romi_http* http, void* write_func, void* write_data, void* xferinfo_func);
 void romi_http_close(romi_http* http);

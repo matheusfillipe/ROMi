@@ -6,12 +6,12 @@ Validates that all TSV database files follow the correct format:
 Platform\tRegion\tName\tURL\tSize
 
 Usage:
-    python3 tools/validate_db.py
+    python3 tools/validate_db.py [db_dir]
 """
 import sys
 from pathlib import Path
 
-db_dir = Path("tools/databases")
+db_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("tools/databases")
 valid = True
 failed_files = []
 

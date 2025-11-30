@@ -2,102 +2,129 @@
 
 ## Executive Summary
 
-Full indexing of all 10 supported platforms would take **3-4 hours** and generate an estimated **25-30 million entries** due to extensive subdirectory structures containing regional variants.
+Full indexing of 9 supported platforms (excluding PS3) takes **~5 minutes** and generates **~23,000 unique entries** after optimization. With all optimizations enabled (deduplication, variant exclusion, compact URLs), the total database size is **~2.6 MB**.
 
-## Subdirectory Discovery
+## Actual Test Results (9 Platforms)
 
-Testing revealed that Myrient's structure has **extensive subdirectories** with regional variants:
+**Test Configuration:**
+- Platforms: PSX, PS2, NES, SNES, GB, GBC, GBA, Genesis, SMS
+- Optimizations: `--deduplicate --exclude-variants --compact-urls`
+- Region Priority: World > USA > EUR > JPN > ASA > Unknown
 
-| Platform | Main Directory Files | With Subdirectories | Subdirectory Depth |
-|----------|---------------------|---------------------|-------------------|
-| PS2      | 11,704              | ~7,000,000 (est.)   | ~600+ (est.)      |
-| PSX      | 10,885              | ~5,500,000 (est.)   | ~500+ (est.)      |
-| NES      | 4,434               | 2,650,000+          | 600+ levels       |
-| PS3      | 4,440               | ~2,440,000 (est.)   | ~550+ (est.)      |
-| SNES     | 4,086               | ~2,400,000 (est.)   | ~500+ (est.)      |
-| GBA      | 3,477               | ~2,000,000 (est.)   | ~450+ (est.)      |
-| Genesis  | 2,786               | ~1,600,000 (est.)   | ~400+ (est.)      |
-| GB       | 1,958               | 670,000+            | 340+ levels       |
-| GBC      | 1,958               | ~670,000 (est.)     | ~340+ (est.)      |
-| SMS      | 699                 | ~350,000 (est.)     | ~300+ (est.)      |
+**Results:**
+| Metric | Value |
+|--------|-------|
+| Total Time | 299.66 seconds (~5 min) |
+| Raw Entries | 899,991 |
+| After Variant Exclusion | 709,181 (-190,810 variants) |
+| After Deduplication | 23,092 unique entries |
+| Total Database Size | 2.60 MB |
+| Compression Ratio | 97.4% reduction |
+
+## Per-Platform Statistics
+
+| Platform | Raw Entries | Unique After Optimization | Database Size |
+|----------|-------------|---------------------------|---------------|
+| PSX      | ~100K       | 6,726                     | 770.9 KB      |
+| PS2      | ~100K       | 6,333                     | 781.3 KB      |
+| NES      | ~100K       | 1,730                     | 170.5 KB      |
+| SNES     | ~100K       | 2,204                     | 221.9 KB      |
+| GBA      | ~60K        | 2,051                     | 256.6 KB      |
+| GB       | ~50K        | 1,323                     | 142.6 KB      |
+| GBC      | ~50K        | 1,128                     | 150.9 KB      |
+| Genesis  | ~50K        | 1,214                     | 128.9 KB      |
+| SMS      | ~20K        | 383                       | 41.6 KB       |
+
+## Optimization Impact
+
+### 1. Variant Exclusion (-21% entries)
+Removes demos, prototypes, betas, samples, and pirate copies:
+- Before: 899,991 entries
+- After: 709,181 entries
+- Removed: 190,810 variant entries
+
+### 2. Region Deduplication (-97% entries)
+Keeps one copy per game based on region priority:
+- Before: 709,181 entries
+- After: 23,092 unique entries
+- Removed: 686,089 regional duplicates
+
+### 3. Compact URLs (-60% database size)
+Stores filename only instead of full URL:
+- Full URL: `https://myrient.erista.me/files/Redump/Sony - PlayStation/Game.zip`
+- Compact: `Game.zip`
+- URL reconstructed at runtime from platform base URL
 
 ## Processing Performance
 
 **Crawling Speed:**
-- Average: 0.6-0.9 seconds per batch (directory with ~2,000-4,000 files)
-- Processing rate: ~2,000-3,000 files/second
+- Average: 0.3-0.5 seconds per page
+- Processing rate: ~3,000 entries/second
 - Network throughput: Stable with concurrent requests (MAX_CONCURRENT=10)
 
-**Test Results:**
-- NES: Reached 2.65 million entries in ~10 minutes (600+ batches)
-- GB: Reached 670K entries in ~4 minutes (340+ batches)
-- SMS: Processing ongoing
-
-## Full Catalog Estimation
-
-| Platform | Main Dir Files | Est. with Subdirs | Est. Time |
-|----------|---------------|-------------------|-----------|
-| PS2      | 11,704        | ~7,000,000        | 40-50 min |
-| PSX      | 10,885        | ~5,500,000        | 30-45 min |
-| NES      | 4,434         | ~2,650,000        | 15-20 min |
-| PS3      | 4,440         | ~2,440,000        | 15-20 min |
-| SNES     | 4,086         | ~2,400,000        | 15-20 min |
-| GBA      | 3,477         | ~2,000,000        | 10-15 min |
-| Genesis  | 2,786         | ~1,600,000        | 8-12 min  |
-| GB       | 1,958         | ~670,000          | 4-6 min   |
-| GBC      | 1,958         | ~670,000          | 4-6 min   |
-| SMS      | 699           | ~350,000          | 2-4 min   |
-| **TOTAL** | **46,427**   | **~25,280,000**   | **3-4 hours** |
+**Per-Platform Timing:**
+| Platform | Time    |
+|----------|---------|
+| PSX      | ~30s    |
+| PS2      | ~30s    |
+| NES      | ~20s    |
+| SNES     | ~20s    |
+| GBA      | ~20s    |
+| GB       | ~15s    |
+| GBC      | ~15s    |
+| Genesis  | ~15s    |
+| SMS      | ~10s    |
 
 ## Recommendations
 
-### For Practical Use
+### For Release Databases (Recommended)
 
-Use the `--per-platform` limit to generate balanced test databases:
+Use all optimizations for smallest, most practical databases:
 
 ```bash
-# Small test set (20 per platform in ~10 seconds)
-tools/.venv/bin/python tools/myrient_indexer.py \
-  --platform PS2,PS3,PSX,NES,SNES,GBA,Genesis,GB,GBC,SMS \
-  --per-platform 20
-
-# Medium set (100 per platform in ~1 minute)
-tools/.venv/bin/python tools/myrient_indexer.py \
-  --platform PS2,PS3,PSX,NES,SNES,GBA,Genesis,GB,GBC,SMS \
-  --per-platform 100
-
-# Large set (1000 per platform in ~10 minutes)
-tools/.venv/bin/python tools/myrient_indexer.py \
-  --platform PS2,PS3,PSX,NES,SNES,GBA,Genesis,GB,GBC,SMS \
-  --per-platform 1000
+python tools/myrient_indexer.py \
+  --deduplicate \
+  --exclude-variants \
+  --compact-urls \
+  --region-priority "World,USA,EUR,JPN,ASA,Unknown" \
+  --output release_databases
 ```
 
-### For Full Indexing
+### For Development Testing
 
-Only recommended if you need the complete catalog with all regional variants:
+Use per-platform limits for quick iteration:
 
 ```bash
-# WARNING: 3-4 hour operation, generates ~25M entries, ~3GB+ database
-tools/.venv/bin/python tools/myrient_indexer.py \
-  --platform PS2,PS3,PSX,NES,SNES,GBA,Genesis,GB,GBC,SMS \
-  --limit 999999999
+# Small test set (20 per platform)
+python tools/myrient_indexer.py --per-platform 20
+
+# Medium set (100 per platform)
+python tools/myrient_indexer.py --per-platform 100
+```
+
+### For Full Raw Catalog (Not Recommended)
+
+Without optimizations, generates ~900K entries in ~5 minutes:
+
+```bash
+# WARNING: Generates ~100MB+ raw database
+python tools/myrient_indexer.py --limit 999999999
 ```
 
 ## Key Insights
 
-1. **Regional Variants Dominate**: Main directories contain only ~0.2% of total files when including all subdirectories
-2. **Depth is Massive**: Some platforms have 600+ subdirectory levels with regional/language variants
-3. **Practical Recommendation**: The main directories already contain the most common ROMs; subdirectories are mostly duplicates with different regions/languages
-4. **Performance is Stable**: The indexer maintains consistent ~0.6-0.9s per directory throughout operation
-5. **Database Size**: Full catalog would generate ~3-4GB TSV file
+1. **Regional Variants Dominate**: ~97% of entries are regional duplicates of the same game
+2. **Deduplication is Essential**: Without it, databases are 40x larger with no practical benefit
+3. **Variant Exclusion Helps**: Demos, protos, betas add ~20% bloat
+4. **Compact URLs**: 60% size reduction with no functionality loss
+5. **PS3 Size**: PS3 has ~4,440 base entries per page, many more pages than other platforms
 
-## Performance Optimizations Applied
+## Automated Updates
 
-1. **Direct Platform Paths**: Skip breadth-first search, go directly to known platform directories
-2. **Concurrent Requests**: Process up to 10 directories in parallel (MAX_CONCURRENT=10)
-3. **Proper HTTP Headers**: User-Agent and Referer to avoid Myrient throttling
-4. **Batch Processing**: Queue-based approach processes directories efficiently
-5. **Per-Platform Limits**: Early exit when limit reached to avoid unnecessary crawling
+The GitHub Actions workflow (`update-databases.yml`) runs weekly to:
+1. Index all platforms with full optimizations
+2. Create timestamped GitHub release with TSV files
+3. Include per-platform statistics
 
 ## Date
 

@@ -13,7 +13,7 @@
 #define ZIP_METHOD_STORED   0
 #define ZIP_METHOD_DEFLATE  8
 
-#define EXTRACT_BUFFER_SIZE (64 * 1024)
+#define EXTRACT_BUFFER_SIZE (256 * 1024)
 
 typedef struct {
     uint32_t signature;

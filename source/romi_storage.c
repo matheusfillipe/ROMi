@@ -80,7 +80,7 @@ RomiStorageResult romi_storage_download(const DbItem* item, RomiStorageProgress 
     if (progress)
         progress("Connecting...", 0.0f);
 
-    romi_http* http = romi_http_get(item->url, NULL, 0);
+    romi_http* http = romi_http_get(item->url, NULL, 0, 0);
     if (!http)
     {
         LOG("failed to connect to %s", item->url);

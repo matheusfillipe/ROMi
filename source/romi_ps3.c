@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include <ya2d/ya2d.h>
 #include <curl/curl.h>
@@ -41,9 +42,9 @@
 #define ANALOG_MIN          (ANALOG_CENTER - ANALOG_THRESHOLD)
 #define ANALOG_MAX          (ANALOG_CENTER + ANALOG_THRESHOLD)
 
-#define ROMI_USER_AGENT "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+#define ROMI_USER_AGENT "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
 
-#define ROMI_CURL_BUFFER_SIZE   (256 * 1024L)
+#define ROMI_CURL_BUFFER_SIZE   (512 * 1024L)    // 512 KB - optimized for throughput
 #define ROMI_FILE_BUFFER_SIZE   (256 * 1024)
 
 
@@ -1132,10 +1133,46 @@ int romi_validate_url(const char* url)
     return 0;
 }
 
+// TCP socket tuning callback for optimized throughput
+__attribute__((unused)) static int romi_tcp_tune_callback(void *clientp, curl_socket_t sockfd, curlsocktype purpose)
+{
+    ROMI_UNUSED(clientp);
+
+    if (purpose == CURLSOCKTYPE_IPCXN)
+    {
+        int recv_buf = 512 * 1024;  // 512 KB receive buffer
+        int send_buf = 256 * 1024;  // 256 KB send buffer
+
+        // Increase TCP receive window for better throughput
+        if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &recv_buf, sizeof(recv_buf)) != 0)
+        {
+            LOG("TCP tuning: Failed to set SO_RCVBUF (errno=%d)", errno);
+        }
+        else
+        {
+            LOG("TCP tuning: SO_RCVBUF set to %d KB", recv_buf / 1024);
+        }
+
+        // Increase TCP send window
+        if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &send_buf, sizeof(send_buf)) != 0)
+        {
+            LOG("TCP tuning: Failed to set SO_SNDBUF (errno=%d)", errno);
+        }
+        else
+        {
+            LOG("TCP tuning: SO_SNDBUF set to %d KB", send_buf / 1024);
+        }
+    }
+
+    return CURL_SOCKOPT_OK;
+}
+
 void romi_curl_init(CURL *curl)
 {
-    // Set user agent string
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, ROMI_USER_AGENT);
+    // Use simple curl-like user agent - Myrient rate-limits browser-like requests!
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.0");
+    LOG("CURL: Using minimal headers (curl-style) to avoid rate limiting");
+
     // don't verify the certificate's name against host
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     // don't verify the peer's SSL certificate
@@ -1158,9 +1195,50 @@ void romi_curl_init(CURL *curl)
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, 60L);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, 30L);
+
+#ifdef DEBUGLOG
+    // Enable verbose CURL logging in debug builds to diagnose issues
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 }
 
-romi_http* romi_http_get(const char* url, const char* content, uint64_t offset)
+// Initialize CURL with throughput optimization for large downloads
+static CURL* romi_curl_init_throughput(int enable_throughput_mode)
+{
+    CURL* curl = curl_easy_init();
+    if (!curl)
+    {
+        LOG("curl_easy_init failed");
+        return NULL;
+    }
+
+    // Apply standard configuration
+    romi_curl_init(curl);
+
+    if (enable_throughput_mode)
+    {
+        // Disable TCP_NODELAY for bulk transfers (enable Nagle's algorithm)
+        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
+        LOG("CURL: Throughput mode ENABLED (Nagle's algorithm ON, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
+
+        // Add socket tuning callback (requires CURLOPT_SOCKOPTFUNCTION support)
+        #ifdef CURLOPT_SOCKOPTFUNCTION
+        curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, romi_tcp_tune_callback);
+        LOG("CURL: Socket tuning callback registered");
+        #else
+        LOG("CURL: Warning - CURLOPT_SOCKOPTFUNCTION not available, socket tuning disabled");
+        #endif
+    }
+    else
+    {
+        // Keep TCP_NODELAY enabled for low-latency (metadata/small requests)
+        LOG("CURL: Low-latency mode (TCP_NODELAY=1, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
+    }
+
+    return curl;
+}
+
+romi_http* romi_http_get(const char* url, const char* content, uint64_t offset, int use_throughput)
 {
     LOG("http get");
 
@@ -1186,37 +1264,15 @@ romi_http* romi_http_get(const char* url, const char* content, uint64_t offset)
         return NULL;
     }
 
-    http->curl = curl_easy_init();
+    http->curl = romi_curl_init_throughput(use_throughput);
     if (!http->curl)
     {
         LOG("curl init error");
         return NULL;
     }
-
-    romi_curl_init(http->curl);
     curl_easy_setopt(http->curl, CURLOPT_URL, url);
 
-    // Set referer to origin (scheme + host) for sites that check it
-    const char* scheme_end = romi_strstr(url, "://");
-    if (scheme_end)
-    {
-        const char* host_start = scheme_end + 3;
-        const char* host_end = host_start;
-        while (*host_end && *host_end != '/' && *host_end != ':' && *host_end != '?')
-            host_end++;
-
-        char referer[256];
-        int scheme_len = (int)(scheme_end - url) + 3;
-        int host_len = (int)(host_end - host_start);
-        if (scheme_len + host_len + 2 < (int)sizeof(referer))
-        {
-            romi_memcpy(referer, url, scheme_len);
-            romi_memcpy(referer + scheme_len, host_start, host_len);
-            referer[scheme_len + host_len] = '/';
-            referer[scheme_len + host_len + 1] = '\0';
-            curl_easy_setopt(http->curl, CURLOPT_REFERER, referer);
-        }
-    }
+    // NOTE: No Referer header - plain curl doesn't send it, and Myrient rate-limits browser-like requests
 
     LOG("starting http GET request for %s", url);
 

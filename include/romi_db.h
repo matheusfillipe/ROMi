@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 typedef enum {
@@ -100,6 +101,7 @@ void romi_db_configure(const char* search, const Config* config);
 uint32_t romi_db_count(void);
 uint32_t romi_db_total(void);
 DbItem* romi_db_get(uint32_t index);
+const char* romi_db_get_full_url(const DbItem* item, char* buf, size_t size);
 
 RomiPlatform romi_parse_platform(const char* str);
 RomiRegion romi_parse_region(const char* str);

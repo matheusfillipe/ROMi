@@ -12,7 +12,7 @@ PS3_IP ?= 192.168.1.100
 PS3_FTP_PORT ?= 21
 PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
-.PHONY: docker-image docker-build docker-build-debug docker-clean rpcs3-db ps3-deploy ps3-debug
+.PHONY: docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug
 
 docker-image:
 	@docker build -t $(DOCKER_IMAGE) .
@@ -28,18 +28,23 @@ docker-clean:
 
 rpcs3-db:
 	@mkdir -p "$(RPCS3_USRDIR)"
-	@cp -v tools/databases/*.tsv "$(RPCS3_USRDIR)/"
+	@cp -v tools/databases/*.tsv "$(RPCS3_USRDIR)/" 2>/dev/null || true
+	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
+
+rpcs3-deploy: docker-build rpcs3-db
+	@echo "Package and databases deployed to RPCS3"
 
 ps3-deploy:
 	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
-	@for f in tools/databases/*.tsv; do curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/$$(basename $$f)"; done
+	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"
+	@for f in tools/databases/*.tsv; do curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/$$(basename $$f)"; done 2>/dev/null || true
 
 ps3-debug: docker-clean docker-build-debug ps3-deploy
 	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 endif
 
-DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db ps3-deploy ps3-debug
+DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug
 ifneq ($(filter $(DOCKER_TARGETS),$(MAKECMDGOALS)),)
   PSL1GHT_SKIP := 1
 endif

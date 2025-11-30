@@ -1,4 +1,5 @@
 #include "romi_download.h"
+#include "romi_db.h"
 #include "romi_storage.h"
 #include "romi_extract.h"
 #include "romi.h"
@@ -13,6 +14,7 @@ static RomiDownloadProgress current_progress = NULL;
 static uint64_t download_total = 0;
 static uint64_t download_current = 0;
 static uint32_t download_start_time = 0;
+static uint32_t last_progress_update = 0;
 
 static size_t write_file_callback(void* buffer, size_t size, size_t nmemb, void* stream)
 {
@@ -69,6 +71,11 @@ static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ul
     if (current_progress && dltotal > 0)
     {
         uint32_t now = romi_time_msec();
+
+        if (now - last_progress_update < 250)
+            return 0;
+
+        last_progress_update = now;
         uint32_t elapsed = now - download_start_time;
 
         char status[64];
@@ -108,26 +115,42 @@ int romi_download_rom(const DbItem* item, RomiDownloadProgress progress)
     current_progress = progress;
     download_current = 0;
     download_total = 0;
+    last_progress_update = 0;
 
-    const char* dest_folder = romi_platform_folder(item->platform);
+    char url_buf[1024];
+    const char* full_url = romi_db_get_full_url(item, url_buf, sizeof(url_buf));
+    if (!full_url)
+        return 0;
+
+    const char* platform_folder = romi_platform_folder(item->platform);
     const char* temp_folder = romi_get_temp_folder();
-    const char* raw_filename = get_filename_from_url(item->url);
+    const char* raw_filename = get_filename_from_url(full_url);
 
     char filename[256];
     url_decode(raw_filename, filename, sizeof(filename));
 
+    char dest_folder[512];
+    int is_disc_platform = (item->platform == PlatformPSX ||
+                            item->platform == PlatformPS2 ||
+                            item->platform == PlatformPS3);
+
+    if (is_disc_platform)
+        romi_snprintf(dest_folder, sizeof(dest_folder), "%s/%s", platform_folder, item->name);
+    else
+        romi_snprintf(dest_folder, sizeof(dest_folder), "%s", platform_folder);
+
     char temp_path[512];
     romi_snprintf(temp_path, sizeof(temp_path), "%s/%s", temp_folder, filename);
 
-    LOG("downloading %s to %s", item->url, temp_path);
+    LOG("downloading %s to %s", full_url, temp_path);
 
     if (progress)
         progress("Connecting...", 0, 0);
 
-    romi_http* http = romi_http_get(item->url, NULL, 0);
+    romi_http* http = romi_http_get(full_url, NULL, 0, 1);
     if (!http)
     {
-        LOG("failed to connect to %s", item->url);
+        LOG("failed to connect to %s", full_url);
         return 0;
     }
 
