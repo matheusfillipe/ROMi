@@ -16,9 +16,17 @@ on:
         default: ''
         type: string
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   update-databases:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout repository
@@ -86,35 +94,14 @@ jobs:
           echo -e "$stats" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create release
-        uses: softprops/action-gh-release@v1
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          tag_name: db-${{ steps.stats.outputs.date_tag }}
-          name: ROM Database ${{ steps.stats.outputs.date_tag }}
-          body: |
-            ## ROM Database Update
+          path: release_databases/
 
-            **Source:** [Myrient](https://myrient.erista.me)
-            **Generated:** ${{ steps.stats.outputs.date_tag }}
-
-            ### Statistics
-            - **Total entries:** ${{ steps.stats.outputs.entries }}
-            - **Total size:** ${{ steps.stats.outputs.size }}
-
-            ### Per Platform
-            ${{ steps.platform_stats.outputs.per_platform }}
-
-            ### Optimizations Applied
-            - Region deduplication (World > USA > EUR > JPN > ASA)
-            - Variant exclusion (demos, prototypes, betas removed)
-            - Compact URLs (filename only, ~60% smaller)
-
-            ### Installation
-            1. Download `sources.txt` and the `.tsv` files for your desired platforms
-            2. Copy all files to your PS3's config folder: `/dev_hdd0/game/ROMI00001/USRDIR/`
-            3. Restart ROMi to load the new databases
-          files: |
-            release_databases/*.tsv
-            release_databases/sources.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

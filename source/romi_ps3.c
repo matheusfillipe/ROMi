@@ -1169,9 +1169,19 @@ __attribute__((unused)) static int romi_tcp_tune_callback(void *clientp, curl_so
 
 void romi_curl_init(CURL *curl)
 {
-    // Use simple curl-like user agent - Myrient rate-limits browser-like requests!
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "curl/8.0");
-    LOG("CURL: Using minimal headers (curl-style) to avoid rate limiting");
+    static struct curl_slist *headers = NULL;
+
+    // Mimic wget headers exactly - Myrient whitelists wget/curl
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Wget/1.24");
+
+    // Match wget's minimal headers
+    if (!headers)
+    {
+        headers = curl_slist_append(headers, "Accept: */*");
+        headers = curl_slist_append(headers, "Accept-Encoding: identity");
+        LOG("CURL: Using wget-style headers (Wget/1.24, Accept-Encoding: identity)");
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     // don't verify the certificate's name against host
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
