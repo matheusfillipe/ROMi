@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ROMi Database</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
+    pre { background: #f0f0f0; padding: 1rem; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>ROMi Database</h1>
+  <p>ROM database files for <a href="https://github.com/matheusfillipe/ROMi">ROMi</a> (PS3 homebrew).</p>
+
+  <h2>Installation</h2>
+  <p>Choose one of the following methods to set up the databases on your PS3.</p>
+
+  <h3>Option 1: Online Setup (Recommended)</h3>
+  <p>With this method, ROMi will download the latest database files directly from the internet. This requires a working internet connection on your PS3.</p>
+  <ol>
+    <li>Download the configuration file: <code><a href="sources.txt">sources.txt</a></code></li>
+    <li>Copy <strong>only</strong> <code>sources.txt</code> to your PS3 at:<br><code>/dev_hdd0/game/ROMI00001/USRDIR/sources.txt</code></li>
+    <li>Start ROMi. The database files will be downloaded automatically.</li>
+  </ol>
+
+  <h3>Option 2: Offline Setup</h3>
+  <p>Use this method if you want to place all the database files on your PS3 manually and not rely on an internet connection for updates.</p>
+  <ol>
+    <li>Download the complete database archive:<br><code><a href="https://github.com/matheusfillipe/ROMi/releases/latest/download/databases.zip">databases.zip</a></code></li>
+    <li>Extract the <code>.zip</code> file.</li>
+    <li>Copy all the extracted files (<code>sources.txt</code> and all <code>romi_*.tsv</code> files) to your PS3 at:<br><code>/dev_hdd0/game/ROMI00001/USRDIR/</code></li>
+    <li>Restart ROMi.</li>
+  </ol>
+
+  <h2>Database Files</h2>
+  <p>The databases are updated weekly. You can view the individual files below:</p>
+  <ul>
+    <li><a href="sources.txt">sources.txt</a> (URL configuration)</li>
+    <li><a href="romi_GB.tsv">romi_GB.tsv</a> - Game Boy</li>
+    <li><a href="romi_GBC.tsv">romi_GBC.tsv</a> - Game Boy Color</li>
+    <li><a href="romi_GBA.tsv">romi_GBA.tsv</a> - Game Boy Advance</li>
+    <li><a href="romi_NES.tsv">romi_NES.tsv</a> - NES</li>
+    <li><a href="romi_SNES.tsv">romi_SNES.tsv</a> - SNES</li>
+    <li><a href="romi_Genesis.tsv">romi_Genesis.tsv</a> - Sega Genesis</li>
+    <li><a href="romi_SMS.tsv">romi_SMS.tsv</a> - Sega Master System</li>
+    <li><a href="romi_PSX.tsv">romi_PSX.tsv</a> - PlayStation</li>
+    <li><a href="romi_N64.tsv">romi_N64.tsv</a> - Nintendo 64</li>
+    <li><a href="romi_Arcade.tsv">romi_Arcade.tsv</a> - Arcade (MAME)</li>
+  </ul>
+
+  <p><small>Source: <a href="https://myrient.erista.me">Myrient</a> | Updated weekly via GitHub Actions</small></p>
+</body>
+</html>
