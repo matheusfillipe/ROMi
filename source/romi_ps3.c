@@ -41,7 +41,7 @@
 #define ANALOG_MIN          (ANALOG_CENTER - ANALOG_THRESHOLD)
 #define ANALOG_MAX          (ANALOG_CENTER + ANALOG_THRESHOLD)
 
-#define ROMI_USER_AGENT "Mozilla/5.0 (PLAYSTATION 3; 1.00)"
+#define ROMI_USER_AGENT "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 #define ROMI_CURL_BUFFER_SIZE   (256 * 1024L)
 #define ROMI_FILE_BUFFER_SIZE   (256 * 1024)
@@ -193,9 +193,7 @@ static void romi_start_debug_log(void)
 {
 #ifdef ROMI_ENABLE_LOGGING
     dbglogger_init();
-    LOG("PKGi PS3 logging initialized");
-
-    dbglogger_failsafe("9999");
+    LOG("ROMi logging initialized");
 #endif
 }
 
@@ -1197,6 +1195,28 @@ romi_http* romi_http_get(const char* url, const char* content, uint64_t offset)
 
     romi_curl_init(http->curl);
     curl_easy_setopt(http->curl, CURLOPT_URL, url);
+
+    // Set referer to origin (scheme + host) for sites that check it
+    const char* scheme_end = romi_strstr(url, "://");
+    if (scheme_end)
+    {
+        const char* host_start = scheme_end + 3;
+        const char* host_end = host_start;
+        while (*host_end && *host_end != '/' && *host_end != ':' && *host_end != '?')
+            host_end++;
+
+        char referer[256];
+        int scheme_len = (int)(scheme_end - url) + 3;
+        int host_len = (int)(host_end - host_start);
+        if (scheme_len + host_len + 2 < (int)sizeof(referer))
+        {
+            romi_memcpy(referer, url, scheme_len);
+            romi_memcpy(referer + scheme_len, host_start, host_len);
+            referer[scheme_len + host_len] = '/';
+            referer[scheme_len + host_len + 1] = '\0';
+            curl_easy_setopt(http->curl, CURLOPT_REFERER, referer);
+        }
+    }
 
     LOG("starting http GET request for %s", url);
 

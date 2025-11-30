@@ -12,6 +12,7 @@ static int cancelled = 0;
 static RomiDownloadProgress current_progress = NULL;
 static uint64_t download_total = 0;
 static uint64_t download_current = 0;
+static uint32_t download_start_time = 0;
 
 static size_t write_file_callback(void* buffer, size_t size, size_t nmemb, void* stream)
 {
@@ -27,6 +28,35 @@ static size_t write_file_callback(void* buffer, size_t size, size_t nmemb, void*
     return 0;
 }
 
+static int hex_to_int(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static void url_decode(const char* src, char* dst, uint32_t dst_size)
+{
+    uint32_t i = 0;
+    while (*src && i < dst_size - 1)
+    {
+        if (*src == '%' && src[1] && src[2])
+        {
+            int hi = hex_to_int(src[1]);
+            int lo = hex_to_int(src[2]);
+            if (hi >= 0 && lo >= 0)
+            {
+                dst[i++] = (char)((hi << 4) | lo);
+                src += 3;
+                continue;
+            }
+        }
+        dst[i++] = *src++;
+    }
+    dst[i] = '\0';
+}
+
 static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ultotal, int64_t ulnow)
 {
     ROMI_UNUSED(p);
@@ -37,7 +67,28 @@ static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ul
         return 1;
 
     if (current_progress && dltotal > 0)
-        current_progress("Downloading...", dlnow, dltotal);
+    {
+        uint32_t now = romi_time_msec();
+        uint32_t elapsed = now - download_start_time;
+
+        char status[64];
+        if (elapsed > 0 && dlnow > 0)
+        {
+            uint32_t speed = (uint32_t)((dlnow * 1000) / elapsed);
+            if (speed > 1024 * 1024)
+                romi_snprintf(status, sizeof(status), "%.1f MB/s", speed / (1024.0f * 1024.0f));
+            else if (speed > 1024)
+                romi_snprintf(status, sizeof(status), "%u KB/s", speed / 1024);
+            else
+                romi_snprintf(status, sizeof(status), "%u B/s", speed);
+        }
+        else
+        {
+            romi_snprintf(status, sizeof(status), "Downloading...");
+        }
+
+        current_progress(status, dlnow, dltotal);
+    }
 
     return 0;
 }
@@ -60,7 +111,10 @@ int romi_download_rom(const DbItem* item, RomiDownloadProgress progress)
 
     const char* dest_folder = romi_platform_folder(item->platform);
     const char* temp_folder = romi_get_temp_folder();
-    const char* filename = get_filename_from_url(item->url);
+    const char* raw_filename = get_filename_from_url(item->url);
+
+    char filename[256];
+    url_decode(raw_filename, filename, sizeof(filename));
 
     char temp_path[512];
     romi_snprintf(temp_path, sizeof(temp_path), "%s/%s", temp_folder, filename);
@@ -103,6 +157,7 @@ int romi_download_rom(const DbItem* item, RomiDownloadProgress progress)
         return 0;
     }
 
+    download_start_time = romi_time_msec();
     int success = romi_http_read(http, &write_file_callback, fp, &progress_callback);
 
     romi_close(fp);

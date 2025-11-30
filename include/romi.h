@@ -33,6 +33,7 @@
 #define ROMI_COUNTOF(arr) (sizeof(arr)/sizeof(0[arr]))
 
 #ifdef ROMI_ENABLE_LOGGING
+#include <stddef.h>
 #include <dbglogger.h>
 #define LOG dbglogger_log
 #else

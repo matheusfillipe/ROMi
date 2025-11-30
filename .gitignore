@@ -60,3 +60,7 @@ build/
 
 # Environment
 .env
+
+# Databases
+tools/databases/
+__pycache__/

@@ -30,4 +30,9 @@ RUN git clone --depth 1 https://github.com/bucanero/mini18n.git /tmp/mini18n && 
     make install && \
     rm -rf /tmp/mini18n
 
+RUN git clone --depth 1 https://github.com/bucanero/dbglogger.git /tmp/dbglogger && \
+    cd /tmp/dbglogger && \
+    make install && \
+    rm -rf /tmp/dbglogger
+
 WORKDIR /src
