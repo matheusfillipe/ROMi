@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     make \
     git \
     python2.7 \
+    python3 \
     libelf1 \
     gettext \
     && rm -rf /var/lib/apt/lists/*
