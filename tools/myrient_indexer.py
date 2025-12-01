@@ -289,6 +289,28 @@ def extract_filename_from_url(url: str) -> str:
     return url.split("/")[-1]
 
 
+def write_sources_file(output_dir: Path, platforms_used: set[str]) -> None:
+    # Write sources.txt to tools/ directory (not databases/) for Makefile compatibility
+    sources_file = output_dir.parent / "sources.txt"
+
+    with open(sources_file, "w", encoding="utf-8") as f:
+        f.write("# ROMi ROM Sources Configuration\n")
+        f.write("# Format: PLATFORM  BASE_URL\n")
+        f.write("# The BASE_URL is prepended to filenames in the database\n")
+        f.write("# Lines starting with # are comments\n")
+        f.write("#\n")
+        f.write("# To use a different ROM source, change the URLs below.\n")
+        f.write("# URLs must end with / and filenames will be appended directly.\n")
+        f.write("\n")
+
+        for platform in sorted(PLATFORM_URLS.keys()):
+            if platform in platforms_used:
+                url = PLATFORM_URLS[platform]
+                f.write(f"{platform:<7} {url}\n")
+
+    print(f"Wrote sources configuration to {sources_file}")
+
+
 def write_databases(entries: list[RomEntry], output_dir: Path, compact_urls: bool = False) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -313,6 +335,8 @@ def write_databases(entries: list[RomEntry], output_dir: Path, compact_urls: boo
         file_size = output_file.stat().st_size
         total_bytes += file_size
         print(f"Wrote {len(platform_entries)} entries to {output_file} ({file_size / 1024:.1f} KB)")
+
+    write_sources_file(output_dir, set(by_platform.keys()))
 
     print(f"\nTotal database size: {total_bytes / 1024:.1f} KB ({total_bytes / 1024 / 1024:.2f} MB)")
 

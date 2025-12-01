@@ -104,6 +104,7 @@ void romi_load_config(Config* config)
     config->filter = DbFilterAll;
     config->active_platform = PlatformUnknown;
     config->music = 1;
+    config->db_update_url[0] = '\0';
     romi_strncpy(config->language, sizeof(config->language), romi_get_user_language());
 
     char data[4096];
@@ -144,7 +145,9 @@ void romi_load_config(Config* config)
 
         text = skipws(text, end);
 
-        if (romi_stricmp(key, "sort") == 0)
+        if (romi_stricmp(key, "url") == 0)
+            romi_strncpy(config->db_update_url, sizeof(config->db_update_url), value);
+        else if (romi_stricmp(key, "sort") == 0)
             config->sort = parse_sort(value);
         else if (romi_stricmp(key, "order") == 0)
             config->order = parse_order(value);
@@ -185,6 +188,9 @@ void romi_save_config(const Config* config)
 {
     char data[4096];
     int len = 0;
+
+    if (config->db_update_url[0])
+        len += romi_snprintf(data + len, sizeof(data) - len, "url %s\n", config->db_update_url);
 
     len += romi_snprintf(data + len, sizeof(data) - len, "language %s\n", config->language);
     len += romi_snprintf(data + len, sizeof(data) - len, "sort %s\n", sort_str(config->sort));

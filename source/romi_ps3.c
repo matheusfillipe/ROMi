@@ -1352,6 +1352,30 @@ int romi_http_read(romi_http* http, void* write_func, void* write_data, void* xf
         return 0;
     }
 
+    // Diagnostic logging to identify rate limiting vs PS3 hardware issues
+    char *effective_url = NULL;
+    long redirect_count = 0;
+    double total_time = 0;
+    double download_speed = 0;
+    char *primary_ip = NULL;
+
+    curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &effective_url);
+    curl_easy_getinfo(http->curl, CURLINFO_REDIRECT_COUNT, &redirect_count);
+    curl_easy_getinfo(http->curl, CURLINFO_TOTAL_TIME, &total_time);
+    curl_easy_getinfo(http->curl, CURLINFO_SPEED_DOWNLOAD, &download_speed);
+    curl_easy_getinfo(http->curl, CURLINFO_PRIMARY_IP, &primary_ip);
+
+    LOG("=== Download Diagnostics ===");
+    LOG("Effective URL: %s", effective_url ? effective_url : "unknown");
+    LOG("Redirects: %ld", redirect_count);
+    LOG("Server IP: %s", primary_ip ? primary_ip : "unknown");
+    LOG("Total time: %.2f seconds", total_time);
+    LOG("CURL reported speed: %.2f KB/s (%.2f MB/s)",
+        download_speed / 1024.0, download_speed / (1024.0 * 1024.0));
+    LOG("Expected for file size: %.2f KB/s",
+        total_time > 0 ? (http->size / 1024.0) / total_time : 0);
+    LOG("===========================");
+
     return 1;
 }
 

@@ -82,6 +82,16 @@ static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ul
         if (elapsed > 0 && dlnow > 0)
         {
             uint32_t speed = (uint32_t)((dlnow * 1000) / elapsed);
+
+            // Periodic diagnostic logging (every 10 seconds)
+            static uint32_t last_diagnostic = 0;
+            if (now - last_diagnostic >= 10000)
+            {
+                LOG("Speed check: downloaded %lld bytes in %u ms = %u KB/s",
+                    dlnow, elapsed, speed / 1024);
+                last_diagnostic = now;
+            }
+
             if (speed > 1024 * 1024)
                 romi_snprintf(status, sizeof(status), "%.1f MB/s", speed / (1024.0f * 1024.0f));
             else if (speed > 1024)

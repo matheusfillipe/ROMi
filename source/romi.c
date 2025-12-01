@@ -595,7 +595,7 @@ int main(int argc, const char* argv[])
     avail_height = VITA_HEIGHT - 2 * (font_height + ROMI_MAIN_HLINE_EXTRA*2 + ROMI_MAIN_VMARGIN);
     bottom_y = VITA_HEIGHT - (ROMI_MAIN_VMARGIN + font_height);
 
-    romi_snprintf(refresh_url, sizeof(refresh_url), "%s/roms.tsv", ROMI_APP_FOLDER);
+    romi_snprintf(refresh_url, sizeof(refresh_url), "%s", config.db_update_url);
 
     state = StateRefreshing;
     romi_start_thread("refresh_thread", &romi_refresh_thread);

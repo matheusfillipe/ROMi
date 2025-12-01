@@ -90,6 +90,7 @@ typedef struct Config {
     RomiPlatform active_platform;
     uint8_t music;
     char language[3];
+    char db_update_url[1024];
 } Config;
 
 int romi_db_reload(char* error, uint32_t error_size);
