@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV PS3DEV=/ps3dev
 ENV PSL1GHT=/ps3dev

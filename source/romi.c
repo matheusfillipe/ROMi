@@ -53,7 +53,30 @@ static void romi_refresh_thread(void)
 {
     LOG("starting update");
 
+    int should_download = 0;
+
     if (romi_menu_result() == MenuResultRefresh && refresh_url[0])
+    {
+        LOG("user requested refresh, will download database");
+        should_download = 1;
+    }
+    else if (refresh_url[0])
+    {
+        char db_path[256];
+        romi_snprintf(db_path, sizeof(db_path), "%s/romi_db.tsv", romi_get_config_folder());
+
+        if (romi_get_size(db_path) <= 0)
+        {
+            LOG("no database file found and URL configured, will auto-download");
+            should_download = 1;
+        }
+        else
+        {
+            LOG("database file exists, skipping download");
+        }
+    }
+
+    if (should_download)
     {
         romi_db_update(refresh_url, error_state, sizeof(error_state));
     }

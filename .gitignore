@@ -67,3 +67,4 @@ __pycache__/
 
 # Python virtual environment
 tools/.venv/
+.docker-built

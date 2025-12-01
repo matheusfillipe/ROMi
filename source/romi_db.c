@@ -321,6 +321,33 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
     }
 
     romi_http_close(http);
+
+    char db_path[256];
+    romi_snprintf(db_path, sizeof(db_path), "%s/romi_db.tsv", romi_get_config_folder());
+
+    LOG("saving downloaded database to %s (%u bytes)", db_path, db_size - prev_size);
+
+    void* fp = romi_create(db_path);
+    if (!fp)
+    {
+        LOG("failed to create database file %s", db_path);
+        db_size = prev_size;
+        romi_snprintf(error, error_size, _("Failed to save database file"));
+        return 0;
+    }
+
+    if (!romi_write(fp, db_data + prev_size, db_size - prev_size))
+    {
+        LOG("failed to write database file");
+        romi_close(fp);
+        db_size = prev_size;
+        romi_snprintf(error, error_size, _("Failed to write database file"));
+        return 0;
+    }
+
+    romi_close(fp);
+    LOG("database file saved successfully");
+
     return 1;
 }
 
@@ -341,13 +368,23 @@ int romi_db_reload(char* error, uint32_t error_size)
         return 0;
     }
 
-    for (int i = 1; i < PlatformCount; i++)
-    {
-        romi_snprintf(path, sizeof(path), "%s/romi_%s.tsv",
-                      romi_get_config_folder(), platform_names[i]);
+    romi_snprintf(path, sizeof(path), "%s/romi_db.tsv", romi_get_config_folder());
 
-        if (romi_get_size(path) > 0)
-            load_tsv_database(path);
+    if (romi_get_size(path) > 0)
+    {
+        LOG("loading combined database from %s", path);
+        load_tsv_database(path);
+    }
+    else
+    {
+        for (int i = 1; i < PlatformCount; i++)
+        {
+            romi_snprintf(path, sizeof(path), "%s/romi_%s.tsv",
+                          romi_get_config_folder(), platform_names[i]);
+
+            if (romi_get_size(path) > 0)
+                load_tsv_database(path);
+        }
     }
 
     LOG("database reload complete, %u total items", db_count);

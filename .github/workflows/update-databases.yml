@@ -86,10 +86,10 @@ jobs:
           cp tools/sources.txt release_databases/sources.txt
           echo "Copied sources.txt for offline package."
 
-      # - name: Validate databases
-      #   run: |
-      #     cd tools
-      #     python validate_db.py ../release_databases/
+      - name: Validate databases
+        run: |
+          cd tools
+          python validate_db.py ../release_databases/
 
       - name: Get database stats
         id: stats

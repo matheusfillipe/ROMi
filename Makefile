@@ -12,21 +12,34 @@ PS3_IP ?= 192.168.1.100
 PS3_FTP_PORT ?= 21
 PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
-.PHONY: docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug ps3-debug-remote-db
+.PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 
+# ---- helper: build image only if missing ----
 docker-image:
-	@docker build -t $(DOCKER_IMAGE) .
+	@ if [ -z "$$(docker images -q $(DOCKER_IMAGE) 2>/dev/null)" ]; then \
+	    echo "Docker image '$(DOCKER_IMAGE)' not found → building..."; \
+	    docker build -t $(DOCKER_IMAGE) .; \
+	  else \
+	    echo "Docker image '$(DOCKER_IMAGE)' already exists → skipping build."; \
+	  fi
 
 docker-build: docker-image
-	@docker run --rm --platform linux/amd64 -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg
 
 docker-build-debug: docker-image
-	@docker run --rm --platform linux/amd64 -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1
 
-docker-clean:
-	@docker run --rm --platform linux/amd64 -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make clean
+docker-clean: docker-image
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make clean
 
-rpcs3-db:
+rpcs3-clean:
+	@echo "Cleaning old database files from RPCS3..."
+	@rm -f "$(RPCS3_USRDIR)"/romi_*.tsv "$(RPCS3_USRDIR)/sources.txt" "$(RPCS3_USRDIR)/config.txt"
+
+rpcs3-db: rpcs3-clean
 	@mkdir -p "$(RPCS3_USRDIR)"
 	@cp -v tools/databases/*.tsv "$(RPCS3_USRDIR)/" 2>/dev/null || true
 	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
@@ -34,24 +47,40 @@ rpcs3-db:
 rpcs3-deploy: docker-build rpcs3-db
 	@echo "Package and databases deployed to RPCS3"
 
-ps3-deploy:
+ps3-clean:
+	@echo "Cleaning old database files from PS3..."
+	@echo -e "rm romi_*.tsv\nrm sources.txt\nrm config.txt\nquit" \
+	  | curl -s -T - "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/" \
+	  --ftp-method nocwd -Q "-SITE CHMOD 755 ." 2>/dev/null || true
+	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_db.tsv" "$(PS3_FTP)/" 2>/dev/null || true
+	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/sources.txt" "$(PS3_FTP)/" 2>/dev/null || true
+	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/config.txt" "$(PS3_FTP)/" 2>/dev/null || true
+	@for plat in GB GBC GBA NES SNES Genesis SMS PSX N64 Arcade; do \
+		curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_$${plat}.tsv" "$(PS3_FTP)/" 2>/dev/null || true; \
+	done
+
+ps3-deploy: ps3-clean
 	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
 	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"
-	@for f in tools/databases/*.tsv; do curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/$$(basename $$f)"; done 2>/dev/null || true
+	@for f in tools/databases/*.tsv; do \
+	  curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/$$(basename $$f)"; \
+	done 2>/dev/null || true
 
 ps3-debug: docker-clean docker-build-debug ps3-deploy
 	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 
-ps3-debug-remote-db: docker-clean docker-build-debug
+ps3-debug-remote-db: docker-clean docker-build-debug ps3-clean
 	@echo "Deploying with remote database configuration..."
 	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
 	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > /tmp/romi_config.txt
 	@curl -T /tmp/romi_config.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/config.txt"
 	@rm /tmp/romi_config.txt
+	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"
 	@echo ""
 	@echo "✓ Remote database mode configured!"
 	@echo "  Database URL: https://matheusfillipe.github.io/ROMi/romi_db.tsv"
+	@echo "  Sources file: tools/sources.txt uploaded"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Install the package on your PS3"
@@ -62,7 +91,9 @@ ps3-debug-remote-db: docker-clean docker-build-debug
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 endif
 
-DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug ps3-debug-remote-db
+# (rest of your original Makefile as before)
+
+DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 ifneq ($(filter $(DOCKER_TARGETS),$(MAKECMDGOALS)),)
   PSL1GHT_SKIP := 1
 endif
