@@ -93,6 +93,8 @@ static void romi_download_thread(void)
 
     romi_sleep(300);
 
+    romi_dialog_set_progress_title(item->name);
+
     romi_lock_process();
     if (romi_download_rom(item, download_progress))
     {

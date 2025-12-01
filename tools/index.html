@@ -17,15 +17,16 @@
   <p>Choose one of the following methods to set up the databases on your PS3.</p>
 
   <h3>Option 1: Online Setup (Recommended)</h3>
-  <p>With this method, ROMi will automatically download and refresh the database files from the internet. This requires a working internet connection on your PS3.</p>
+  <p>With this method, ROMi will automatically download and refresh the combined database from the internet. This requires a working internet connection on your PS3.</p>
   <ol>
     <li>Create a new text file named <code>config.txt</code> on your computer.</li>
     <li>Add the following line to the file:
-      <pre><code>url https://matheusfillipe.github.io/ROMi/romi_db.txt</code></pre>
+      <pre><code>url https://matheusfillipe.github.io/ROMi/romi_db.tsv</code></pre>
     </li>
     <li>Copy your new <code>config.txt</code> file to your PS3 at:<br><code>/dev_hdd0/game/ROMI00001/USRDIR/config.txt</code></li>
-    <li>Start ROMi. The database files will be downloaded and updated automatically on startup or when you select "Refresh" from the menu.</li>
+    <li>Start ROMi and select "Refresh" from the menu. The combined database file (containing all platforms) will be downloaded automatically.</li>
   </ol>
+  <p><strong>Note:</strong> The database is downloaded once when you refresh. You can update it anytime by selecting "Refresh" again in the ROMi menu.</p>
 
   <h3>Option 2: Offline Setup</h3>
   <p>Use this method if you want to place all the database files on your PS3 manually and not rely on an internet connection for updates.</p>
@@ -37,11 +38,11 @@
   </ol>
 
   <h2>Database Files</h2>
-  <p>The databases are updated weekly. The primary file for online updates is:</p>
+  <p>The databases are updated weekly via GitHub Actions. The primary file for online updates is:</p>
   <ul>
-    <li><a href="romi_db.txt">romi_db.txt</a> (List of all database files)</li>
+    <li><a href="romi_db.tsv">romi_db.tsv</a> - Combined database (all platforms)</li>
   </ul>
-  <p>You can see the contents of the individual database files below:</p>
+  <p>Individual platform database files (for offline use):</p>
   <ul>
     <li><a href="romi_GB.tsv">romi_GB.tsv</a> - Game Boy</li>
     <li><a href="romi_GBC.tsv">romi_GBC.tsv</a> - Game Boy Color</li>

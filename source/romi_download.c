@@ -62,13 +62,15 @@ static void url_decode(const char* src, char* dst, uint32_t dst_size)
 static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ultotal, int64_t ulnow)
 {
     ROMI_UNUSED(p);
+    ROMI_UNUSED(dltotal);
+    ROMI_UNUSED(dlnow);
     ROMI_UNUSED(ultotal);
     ROMI_UNUSED(ulnow);
 
     if (cancelled)
         return 1;
 
-    if (current_progress && dltotal > 0)
+    if (current_progress && download_total > 0)
     {
         uint32_t now = romi_time_msec();
 
@@ -78,17 +80,19 @@ static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ul
         last_progress_update = now;
         uint32_t elapsed = now - download_start_time;
 
+        uint64_t current = download_current;
+
         char status[64];
-        if (elapsed > 0 && dlnow > 0)
+        if (elapsed > 0 && current > 0)
         {
-            uint32_t speed = (uint32_t)((dlnow * 1000) / elapsed);
+            uint32_t speed = (uint32_t)((current * 1000) / elapsed);
 
             // Periodic diagnostic logging (every 10 seconds)
             static uint32_t last_diagnostic = 0;
             if (now - last_diagnostic >= 10000)
             {
-                LOG("Speed check: downloaded %lld bytes in %u ms = %u KB/s",
-                    dlnow, elapsed, speed / 1024);
+                LOG("Speed check: downloaded %llu bytes in %u ms = %u KB/s",
+                    current, elapsed, speed / 1024);
                 last_diagnostic = now;
             }
 
@@ -104,7 +108,7 @@ static int progress_callback(void* p, int64_t dltotal, int64_t dlnow, int64_t ul
             romi_snprintf(status, sizeof(status), "Downloading...");
         }
 
-        current_progress(status, dlnow, dltotal);
+        current_progress(status, current, download_total);
     }
 
     return 0;

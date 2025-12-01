@@ -12,7 +12,7 @@ PS3_IP ?= 192.168.1.100
 PS3_FTP_PORT ?= 21
 PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
-.PHONY: docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug
+.PHONY: docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug ps3-debug-remote-db
 
 docker-image:
 	@docker build -t $(DOCKER_IMAGE) .
@@ -42,9 +42,27 @@ ps3-deploy:
 ps3-debug: docker-clean docker-build-debug ps3-deploy
 	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
+
+ps3-debug-remote-db: docker-clean docker-build-debug
+	@echo "Deploying with remote database configuration..."
+	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
+	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > /tmp/romi_config.txt
+	@curl -T /tmp/romi_config.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/config.txt"
+	@rm /tmp/romi_config.txt
+	@echo ""
+	@echo "✓ Remote database mode configured!"
+	@echo "  Database URL: https://matheusfillipe.github.io/ROMi/romi_db.tsv"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Install the package on your PS3"
+	@echo "  2. Run ROMi"
+	@echo "  3. Press 'Refresh' in the menu to download the database"
+	@echo ""
+	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
+	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 endif
 
-DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug
+DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy ps3-deploy ps3-debug ps3-debug-remote-db
 ifneq ($(filter $(DOCKER_TARGETS),$(MAKECMDGOALS)),)
   PSL1GHT_SKIP := 1
 endif
