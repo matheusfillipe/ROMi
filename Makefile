@@ -4,7 +4,7 @@
 ifneq ($(wildcard /.dockerenv),/.dockerenv)
 -include .env
 
-DOCKER_IMAGE := ps3dev-romi
+DOCKER_IMAGE := mattfly/ps3-builder:latest
 RPCS3_HDD0 := $(HOME)/Library/Application Support/rpcs3/dev_hdd0
 RPCS3_USRDIR := $(RPCS3_HDD0)/game/ROMI00001/USRDIR
 
@@ -14,20 +14,30 @@ PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
 .PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 
-# ---- helper: build image only if missing ----
+# ---- helper: pull image from Docker Hub or build locally ----
 docker-image:
 	@ if [ -z "$$(docker images -q $(DOCKER_IMAGE) 2>/dev/null)" ]; then \
-	    echo "Docker image '$(DOCKER_IMAGE)' not found → building..."; \
-	    docker build -t $(DOCKER_IMAGE) .; \
+	    echo "Docker image '$(DOCKER_IMAGE)' not found locally..."; \
+	    echo "Trying to pull from Docker Hub..."; \
+	    docker pull $(DOCKER_IMAGE) || \
+	    (echo "Pull failed, building locally..." && docker build --platform linux/amd64 -t $(DOCKER_IMAGE) .); \
 	  else \
-	    echo "Docker image '$(DOCKER_IMAGE)' already exists → skipping build."; \
+	    echo "Docker image '$(DOCKER_IMAGE)' already exists → skipping."; \
 	  fi
 
 docker-build: docker-image
+	@echo "Compiling language files..."
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) \
+	  sh -c 'cd pkgfiles/USRDIR/LANG && for po in *.po; do msgfmt -o "$${po%.po}.mo" "$$po" 2>/dev/null || true; done'
 	@docker run --rm --platform linux/amd64 \
 	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg
 
 docker-build-debug: docker-image
+	@echo "Compiling language files..."
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) \
+	  sh -c 'cd pkgfiles/USRDIR/LANG && for po in *.po; do msgfmt -o "$${po%.po}.mo" "$$po" 2>/dev/null || true; done'
 	@docker run --rm --platform linux/amd64 \
 	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1
 
@@ -248,7 +258,6 @@ npdrm: $(BUILD)
 	@$(SELF_NPDRM) $(SCETOOL_FLAGS) --np-content-id=$(CONTENTID) --encrypt $(BUILDDIR)/$(basename $(notdir $(OUTPUT))).elf $(BUILDDIR)/../EBOOT.BIN
 
 #---------------------------------------------------------------------------------
-
 quickpkg:
 	$(VERB) if [ -n "$(PKGFILES)" -a -d "$(PKGFILES)" ]; then cp -rf $(PKGFILES)/* $(BUILDDIR)/pkg/; fi
 	$(VERB) $(PKG) --contentid $(CONTENTID) $(BUILDDIR)/pkg/ $(TARGET).pkg >> /dev/null

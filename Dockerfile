@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     git \
     python2.7 \
     libelf1 \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sL http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -o /tmp/libssl.deb && \

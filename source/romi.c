@@ -600,9 +600,11 @@ static void reposition(void)
 static void romi_load_language(const char* lang)
 {
     char path[256];
-    romi_snprintf(path, sizeof(path), ROMI_APP_FOLDER "/LANG/%s.po", lang);
+    romi_snprintf(path, sizeof(path), ROMI_APP_FOLDER "/LANG/%s.mo", lang);
     LOG("Loading language file (%s)...", path);
+    LOG("Language parameter: %s", lang);
     mini18n_set_locale(path);
+    LOG("Language loading completed");
 }
 
 int main(int argc, const char* argv[])
@@ -610,10 +612,13 @@ int main(int argc, const char* argv[])
     romi_start();
 
     romi_load_config(&config);
+    LOG("Detected system language: %s", config.language);
     if (config.music)
         romi_start_music();
 
+    LOG("About to load language: %s", config.language);
     romi_load_language(config.language);
+    LOG("Language loading completed");
     romi_dialog_init();
 
     font_height = romi_text_height("M");
