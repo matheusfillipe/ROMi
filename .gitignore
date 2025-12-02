@@ -69,3 +69,4 @@ __pycache__/
 tools/.venv/
 .docker-built
 *.mo
+*.yts

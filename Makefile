@@ -26,18 +26,10 @@ docker-image:
 	  fi
 
 docker-build: docker-image
-	@echo "Compiling language files..."
-	@docker run --rm --platform linux/amd64 \
-	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) \
-	  sh -c 'cd pkgfiles/USRDIR/LANG && for po in *.po; do msgfmt -o "$${po%.po}.mo" "$$po" 2>/dev/null || true; done'
 	@docker run --rm --platform linux/amd64 \
 	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg
 
 docker-build-debug: docker-image
-	@echo "Compiling language files..."
-	@docker run --rm --platform linux/amd64 \
-	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) \
-	  sh -c 'cd pkgfiles/USRDIR/LANG && for po in *.po; do msgfmt -o "$${po%.po}.mo" "$$po" 2>/dev/null || true; done'
 	@docker run --rm --platform linux/amd64 \
 	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1
 
@@ -55,6 +47,9 @@ rpcs3-db: rpcs3-clean
 	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
 
 rpcs3-deploy: docker-build rpcs3-db
+	@mkdir -p "$(RPCS3_USRDIR)/LANG"
+	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
+	@cp -v pkgfiles/USRDIR/LANG/*.po "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
 	@echo "Package and databases deployed to RPCS3"
 
 ps3-clean:
@@ -259,6 +254,7 @@ npdrm: $(BUILD)
 
 #---------------------------------------------------------------------------------
 quickpkg:
+	$(VERB) cd $(PKGFILES)/USRDIR/LANG && for po in *.po; do python3 $(CURDIR)/tools/po_to_yts.py "$$po" "$${po%.po}.yts" || true; done
 	$(VERB) if [ -n "$(PKGFILES)" -a -d "$(PKGFILES)" ]; then cp -rf $(PKGFILES)/* $(BUILDDIR)/pkg/; fi
 	$(VERB) $(PKG) --contentid $(CONTENTID) $(BUILDDIR)/pkg/ $(TARGET).pkg >> /dev/null
 	$(VERB) cp $(TARGET).pkg $(TARGET).gnpdrm.pkg

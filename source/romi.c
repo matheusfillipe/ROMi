@@ -600,7 +600,7 @@ static void reposition(void)
 static void romi_load_language(const char* lang)
 {
     char path[256];
-    romi_snprintf(path, sizeof(path), ROMI_APP_FOLDER "/LANG/%s.mo", lang);
+    romi_snprintf(path, sizeof(path), ROMI_APP_FOLDER "/LANG/%s.yts", lang);
     LOG("Loading language file (%s)...", path);
     LOG("Language parameter: %s", lang);
     mini18n_set_locale(path);
