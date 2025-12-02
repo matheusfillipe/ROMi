@@ -251,9 +251,12 @@ void init_music(void)
 {
     MikMod_InitThreads();
     
-    /* register the driver and S3M module loader */
+    /* register the driver and module loaders */
     MikMod_RegisterDriver(&drv_psl1ght);    
     MikMod_RegisterLoader(&load_s3m);
+    MikMod_RegisterLoader(&load_it);
+    MikMod_RegisterLoader(&load_xm);
+    MikMod_RegisterLoader(&load_mod);
     
     /* init the library */
     md_mode |= DMODE_SOFT_MUSIC | DMODE_STEREO | DMODE_HQMIXER | DMODE_16BITS;
@@ -266,7 +269,7 @@ void init_music(void)
     LOG("Init %s", MikMod_InfoDriver());
     LOG("Loader %s", MikMod_InfoLoader());
     
-    mem_reader = new_mikmod_mem_reader(haiku_s3m_bin, haiku_s3m_bin_size);
+    mem_reader = new_mikmod_mem_reader(lost_painting_bin, lost_painting_bin_size);
     module = Player_LoadGeneric(mem_reader, 64, 0);
     module->wrap = TRUE;
 

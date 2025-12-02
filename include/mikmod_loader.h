@@ -1,8 +1,8 @@
 #ifndef mikmod_loader_h
 #define mikmod_loader_h
 
-extern const uint8_t haiku_s3m_bin[];
-extern const uint32_t haiku_s3m_bin_size;
+extern const uint8_t lost_painting_bin[];
+extern const uint32_t lost_painting_bin_size;
 
 typedef struct _MY_MEMREADER {
 	MREADER core;
