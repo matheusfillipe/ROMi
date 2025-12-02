@@ -157,8 +157,6 @@ void romi_load_config(Config* config)
             config->active_platform = romi_parse_platform(value);
         else if (romi_stricmp(key, "no_music") == 0)
             config->music = 0;
-        else if (romi_stricmp(key, "language") == 0)
-            romi_strncpy(config->language, sizeof(config->language), value);
     }
 }
 
@@ -192,7 +190,6 @@ void romi_save_config(const Config* config)
     if (config->db_update_url[0])
         len += romi_snprintf(data + len, sizeof(data) - len, "url %s\n", config->db_update_url);
 
-    len += romi_snprintf(data + len, sizeof(data) - len, "language %s\n", config->language);
     len += romi_snprintf(data + len, sizeof(data) - len, "sort %s\n", sort_str(config->sort));
     len += romi_snprintf(data + len, sizeof(data) - len, "order %s\n", order_str(config->order));
 
