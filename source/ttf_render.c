@@ -2,9 +2,10 @@
 // you need the Oopo ps3libraries to work with freetype
 
 #include <ft2build.h>
-#include <freetype/freetype.h> 
+#include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
 #include "ttf_render.h"
+#include "romi.h"
 
 /******************************************************************************************************************************************************/
 /* TTF functions to load and convert fonts                                                                                                             */
@@ -18,7 +19,7 @@ static int f_face[4] = {0, 0, 0, 0};
 
 int TTFLoadFont(int set, char * path, void * from_memory, int size_from_memory)
 {
-   
+
     if(!ttf_inited)
         FT_Init_FreeType(&freetype);
     ttf_inited = 1;
@@ -30,6 +31,14 @@ int TTFLoadFont(int set, char * path, void * from_memory, int size_from_memory)
     } else {
         if(FT_New_Memory_Face(freetype, from_memory, size_from_memory, 0, &face[set])) return -1;
         }
+
+// Explicitly select Unicode charmap for UTF-8 support
+      if(FT_Select_Charmap(face[set], FT_ENCODING_UNICODE) != 0) {
+          // Unicode charmap not found, try to use default
+          if(face[set]->num_charmaps > 0) {
+              FT_Set_Charmap(face[set], face[set]->charmaps[0]);
+          }
+      }
 
     f_face[set] = 1;
 
@@ -323,6 +332,19 @@ int display_ttf_string(int posx, int posy, const char *string, u32 color, u32 bk
 
         if(*ustring == 32 || *ustring == 9) {posx += sw>>1; ustring++; continue;}
 
+        // Handle special UI markers BEFORE UTF-8 decoding
+        // These are single-byte characters that need special rendering
+        u8 raw_byte = *ustring;
+        if(raw_byte == 0x04 || raw_byte == 0x09 || raw_byte == 0x1e || 
+           raw_byte == 0x1f || raw_byte == 0xaf || raw_byte == 0xfa || 
+           raw_byte == 0xfb || raw_byte == 0xfc || raw_byte == 0xfd) {
+            // Render marker using bitmap font system (original method)
+            romi_draw_marker_char(posx, posy, Z_ttf, color, raw_byte);
+            posx += sw;
+            ustring++;
+            continue;
+        }
+
         if(*ustring & 128) {
             m = 1;
 
@@ -342,9 +364,11 @@ int display_ttf_string(int posx, int posy, const char *string, u32 color, u32 bk
                     if((*ustring & 0xc0) != 0x80) break; // error!
                     ttf_char = (ttf_char <<6) |((u32) (*(ustring++) & 63));
              }
-           
+
             if((n != m) && !*ustring) break;
-        
+
+
+
         } else ttf_char = (u32) *(ustring++);
 
 
@@ -404,15 +428,25 @@ int display_ttf_string(int posx, int posy, const char *string, u32 color, u32 bk
 
             FT_UInt index;
 
-            if(f_face[0] && (index = FT_Get_Char_Index(face[0], ttf_char))!=0 
-                && !FT_Load_Glyph(face[0], index, FT_LOAD_RENDER )) slot = face[0]->glyph;
-            else if(f_face[1] && (index = FT_Get_Char_Index(face[1], ttf_char))!=0 
-                && !FT_Load_Glyph(face[1], index, FT_LOAD_RENDER )) slot = face[1]->glyph;
-            else if(f_face[2] && (index = FT_Get_Char_Index(face[2], ttf_char))!=0 
-                && !FT_Load_Glyph(face[2], index, FT_LOAD_RENDER )) slot = face[2]->glyph;
-            else if(f_face[3] && (index = FT_Get_Char_Index(face[3], ttf_char))!=0 
-                && !FT_Load_Glyph(face[3], index, FT_LOAD_RENDER )) slot = face[3]->glyph;
-            else ttf_char = 0;
+            if(f_face[0] && (index = FT_Get_Char_Index(face[0], ttf_char))!=0
+                && !FT_Load_Glyph(face[0], index, FT_LOAD_RENDER )) {
+                slot = face[0]->glyph;
+            }
+            else if(f_face[1] && (index = FT_Get_Char_Index(face[1], ttf_char))!=0
+                && !FT_Load_Glyph(face[1], index, FT_LOAD_RENDER )) {
+                slot = face[1]->glyph;
+            }
+            else if(f_face[2] && (index = FT_Get_Char_Index(face[2], ttf_char))!=0
+                && !FT_Load_Glyph(face[2], index, FT_LOAD_RENDER )) {
+                slot = face[2]->glyph;
+            }
+            else if(f_face[3] && (index = FT_Get_Char_Index(face[3], ttf_char))!=0
+                && !FT_Load_Glyph(face[3], index, FT_LOAD_RENDER )) {
+                slot = face[3]->glyph;
+            }
+else {
+                  ttf_char = 0;
+              }
 
             if(ttf_char!=0) {
                 ww = ww2 = 0;

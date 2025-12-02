@@ -26,6 +26,28 @@
 #include <mikmod.h>
 #include "mikmod_loader.h"
 
+#ifdef ROMI_FILE_LOGGING
+#include <stdarg.h>
+void romi_dual_log(const char* format, ...) {
+    char buffer[1024];
+    va_list args;
+
+    // Format the message
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+
+    // Log to UDP (for PS3 real hardware)
+    dbglogger_log("%s", buffer);
+
+    // Also log to file (for RPCS3)
+    FILE* f = fopen("/dev_hdd0/game/ROMI00001/USRDIR/romi_debug.log", "a");
+    if (f) {
+        fprintf(f, "%s\n", buffer);
+        fclose(f);
+    }
+}
+#endif
 
 #define OSKDIALOG_FINISHED          0x503
 #define OSKDIALOG_UNLOADED          0x504
@@ -603,12 +625,29 @@ void romi_dialog_input_get_text(char* text, uint32_t size)
 void load_ttf_fonts()
 {
 	LOG("loading TTF fonts");
-	
+
 	TTFUnloadFont();
-	TTFLoadFont(0, "/dev_flash/data/font/SCE-PS3-SR-R-LATIN2.TTF", NULL, 0);
-	TTFLoadFont(1, "/dev_flash/data/font/SCE-PS3-DH-R-CGB.TTF", NULL, 0);
-	TTFLoadFont(2, "/dev_flash/data/font/SCE-PS3-SR-R-JPN.TTF", NULL, 0);
-	TTFLoadFont(3, "/dev_flash/data/font/SCE-PS3-YG-R-KOR.TTF", NULL, 0);
+
+	// Use same fonts as PKGi - LATIN2 works for Portuguese!
+	if(TTFLoadFont(0, "/dev_flash/data/font/SCE-PS3-SR-R-LATIN2.TTF", NULL, 0) == 0)
+		LOG("Font 0 (SR-LATIN2) loaded successfully");
+	else
+		LOG("ERROR: Failed to load Font 0 (SR-LATIN2)");
+
+	if(TTFLoadFont(1, "/dev_flash/data/font/SCE-PS3-DH-R-CGB.TTF", NULL, 0) == 0)
+		LOG("Font 1 (DH-CGB) loaded successfully");
+	else
+		LOG("ERROR: Failed to load Font 1 (DH-CGB)");
+
+	if(TTFLoadFont(2, "/dev_flash/data/font/SCE-PS3-SR-R-JPN.TTF", NULL, 0) == 0)
+		LOG("Font 2 (JPN) loaded successfully");
+	else
+		LOG("ERROR: Failed to load Font 2 (JPN)");
+
+	if(TTFLoadFont(3, "/dev_flash/data/font/SCE-PS3-YG-R-KOR.TTF", NULL, 0) == 0)
+		LOG("Font 3 (KOR) loaded successfully");
+	else
+		LOG("ERROR: Failed to load Font 3 (KOR)");
 	
 	ya2d_texturePointer = (u32*) init_ttf_table((u16*) ya2d_texturePointer);
 }
@@ -1096,6 +1135,28 @@ void romi_draw_text_ttf(int x, int y, int z, uint32_t color, const char* text)
 int romi_text_width_ttf(const char* text)
 {
     return (display_ttf_string(0, 0, text, 0, 0, ROMI_FONT_WIDTH+6, ROMI_FONT_HEIGHT+2));
+}
+
+void romi_draw_marker_char(int x, int y, int z, uint32_t color, uint8_t marker)
+{
+    // Handle button markers as textures (original behavior)
+    switch(marker) {
+        case 0xFA: // ROMI_UTF8_O (circle)
+            romi_draw_texture_z(tex_buttons.circle, x, y, z, 0.5f);
+            return;
+        case 0xFB: // ROMI_UTF8_X (cross)
+            romi_draw_texture_z(tex_buttons.cross, x, y, z, 0.5f);
+            return;
+        case 0xFC: // ROMI_UTF8_T (triangle)
+            romi_draw_texture_z(tex_buttons.triangle, x, y, z, 0.5f);
+            return;
+        case 0xFD: // ROMI_UTF8_S (square)
+            romi_draw_texture_z(tex_buttons.square, x, y, z, 0.5f);
+            return;
+    }
+    // For other markers (checkboxes, sort icons, clear), use bitmap font
+    SetFontColor(RGBA_COLOR(color, 255), 0);
+    DrawChar(x, y, z, marker);
 }
 
 

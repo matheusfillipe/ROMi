@@ -35,7 +35,12 @@
 #ifdef ROMI_ENABLE_LOGGING
 #include <stddef.h>
 #include <dbglogger.h>
+#ifdef ROMI_FILE_LOGGING
+void romi_dual_log(const char* format, ...);
+#define LOG romi_dual_log
+#else
 #define LOG dbglogger_log
+#endif
 #else
 #define LOG(...)
 #endif
@@ -151,6 +156,7 @@ void romi_draw_fill_rect_z(int x, int y, int z, int w, int h, uint32_t color);
 void romi_draw_text(int x, int y, uint32_t color, const char* text);
 void romi_draw_text_z(int x, int y, int z, uint32_t color, const char* text);
 void romi_draw_text_ttf(int x, int y, int z, uint32_t color, const char* text);
-int romi_text_width(const char* text);
 int romi_text_width_ttf(const char* text);
+void romi_draw_marker_char(int x, int y, int z, uint32_t color, uint8_t marker);
+int romi_text_width(const char* text);
 int romi_text_height(const char* text);

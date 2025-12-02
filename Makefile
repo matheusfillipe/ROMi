@@ -12,7 +12,7 @@ PS3_IP ?= 192.168.1.100
 PS3_FTP_PORT ?= 21
 PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
-.PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
+.PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-build rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 
 # ---- helper: pull image from Docker Hub or build locally ----
 docker-image:
@@ -39,14 +39,18 @@ docker-clean: docker-image
 
 rpcs3-clean:
 	@echo "Cleaning old database files from RPCS3..."
-	@rm -f "$(RPCS3_USRDIR)"/romi_*.tsv "$(RPCS3_USRDIR)/sources.txt" "$(RPCS3_USRDIR)/config.txt"
+	@rm -f "$(RPCS3_USRDIR)"/romi_*.tsv "$(RPCS3_USRDIR)/sources.txt" "$(RPCS3_USRDIR)/config.txt" "$(RPCS3_USRDIR)/romi_debug.log"
 
 rpcs3-db: rpcs3-clean
 	@mkdir -p "$(RPCS3_USRDIR)"
 	@cp -v tools/databases/*.tsv "$(RPCS3_USRDIR)/" 2>/dev/null || true
 	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
 
-rpcs3-deploy: docker-build rpcs3-db
+rpcs3-build: docker-image
+	@docker run --rm --platform linux/amd64 \
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1 CFLAGS_EXTRA="-DROMI_FILE_LOGGING"
+
+rpcs3-deploy: rpcs3-build rpcs3-db
 	@mkdir -p "$(RPCS3_USRDIR)/LANG"
 	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
 	@cp -v pkgfiles/USRDIR/LANG/*.po "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
@@ -160,6 +164,10 @@ LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
 ifdef DEBUGLOG
 CFLAGS		+=	-DROMI_ENABLE_LOGGING
 LIBS		+=	-ldbglogger
+endif
+
+ifdef CFLAGS_EXTRA
+CFLAGS		+=	$(CFLAGS_EXTRA)
 endif
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

@@ -329,7 +329,7 @@ int romi_do_menu(romi_input* input)
             romi_snprintf(text, sizeof(text), ROMI_UTF8_CLEAR " %s", platform_entries[platform_index].name);
         }
 
-        romi_draw_text_z(x, y, ROMI_MENU_TEXT_Z, (menu_selected == i) ? ROMI_COLOR_TEXT_MENU_SELECTED : ROMI_COLOR_TEXT_MENU, text);
+        romi_draw_text_ttf(x, y, ROMI_MENU_TEXT_Z, (menu_selected == i) ? ROMI_COLOR_TEXT_MENU_SELECTED : ROMI_COLOR_TEXT_MENU, text);
 
         y += font_height;
     }
