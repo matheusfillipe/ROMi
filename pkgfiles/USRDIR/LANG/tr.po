@@ -173,3 +173,7 @@ msgstr "Onayla"
 
 msgid "Back"
 msgstr "Geri"
+
+# Dialog strings from romi_dialog.c
+msgid "Extension"
+msgstr "Uzantı"

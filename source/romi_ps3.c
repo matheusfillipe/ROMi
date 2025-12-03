@@ -1092,41 +1092,94 @@ void romi_draw_text_z(int x, int y, int z, uint32_t color, const char* text)
 {
     int i=x, j=y;
     SetFontColor(RGBA_COLOR(color, 255), 0);
-    while (*text) {
-        switch(*text) {
-            case '\n':
-                i = x;
-                j += ROMI_FONT_HEIGHT;
-                text++;
-                continue;
-            case '\xfa':
-                romi_draw_texture_z(tex_buttons.circle, i, j, z, 0.5f);
-                i += ROMI_FONT_WIDTH;
-                text++;
-                continue;
-            case '\xfb':
-                romi_draw_texture_z(tex_buttons.cross, i, j, z, 0.5f);
-                i += ROMI_FONT_WIDTH;
-                text++;
-                continue;
-            case '\xfc':
-                romi_draw_texture_z(tex_buttons.triangle, i, j, z, 0.5f);
-                i += ROMI_FONT_WIDTH;
-                text++;
-                continue;
-            case '\xfd':
-                romi_draw_texture_z(tex_buttons.square, i, j, z, 0.5f);
-                i += ROMI_FONT_WIDTH;
-                text++;
-                continue;
-        }
-        
-        DrawChar(i, j, z, (u8) *text);
-        i += ROMI_FONT_WIDTH;
-        text++; 
-    }    
-}
+    const uint8_t* utext = (const uint8_t*)text;
 
+    while (*utext) {
+        // Check for newline
+        if (*utext == '\n') {
+            i = x;
+            j += ROMI_FONT_HEIGHT;
+            utext++;
+            continue;
+        }
+
+        // Check for button markers
+        if (*utext == '\xfa') {
+            romi_draw_texture_z(tex_buttons.circle, i, j, z, 0.5f);
+            i += ROMI_FONT_WIDTH;
+            utext++;
+            continue;
+        }
+        if (*utext == '\xfb') {
+            romi_draw_texture_z(tex_buttons.cross, i, j, z, 0.5f);
+            i += ROMI_FONT_WIDTH;
+            utext++;
+            continue;
+        }
+        if (*utext == '\xfc') {
+            romi_draw_texture_z(tex_buttons.triangle, i, j, z, 0.5f);
+            i += ROMI_FONT_WIDTH;
+            utext++;
+            continue;
+        }
+        if (*utext == '\xfd') {
+            romi_draw_texture_z(tex_buttons.square, i, j, z, 0.5f);
+            i += ROMI_FONT_WIDTH;
+            utext++;
+            continue;
+        }
+
+        // Check for UTF-8 multi-byte sequence
+        if (*utext & 0x80) {
+            uint32_t codepoint = 0;
+            int bytes = 0;
+
+            if ((*utext & 0xE0) == 0xC0) {
+                // 2-byte sequence
+                codepoint = (*utext++ & 0x1F);
+                bytes = 1;
+            } else if ((*utext & 0xF0) == 0xE0) {
+                // 3-byte sequence
+                codepoint = (*utext++ & 0x0F);
+                bytes = 2;
+            } else if ((*utext & 0xF8) == 0xF0) {
+                // 4-byte sequence
+                codepoint = (*utext++ & 0x07);
+                bytes = 3;
+            } else {
+                // Invalid UTF-8, skip
+                utext++;
+                continue;
+            }
+
+            // Read continuation bytes
+            for (int b = 0; b < bytes; b++) {
+                if (!*utext || (*utext & 0xC0) != 0x80) break;
+                codepoint = (codepoint << 6) | (*utext++ & 0x3F);
+            }
+
+            // Render UTF-8 character using TTF (create single-char string for display_ttf_string)
+            char utf8_char[5];
+            int len = 0;
+            const uint8_t* backtrack = utext - (bytes + 1);
+            while (len <= bytes) {
+                utf8_char[len] = *backtrack++;
+                len++;
+            }
+            utf8_char[len] = '\0';
+
+            Z_ttf = z;
+            display_ttf_string(i, j, utf8_char, RGBA_COLOR(color, 255), 0, ROMI_FONT_WIDTH+6, ROMI_FONT_HEIGHT+2);
+            i += ROMI_FONT_WIDTH;
+            continue;
+        }
+
+        // Regular ASCII character
+        DrawChar(i, j, z, *utext);
+        i += ROMI_FONT_WIDTH;
+        utext++;
+    }
+}
 
 void romi_draw_text_ttf(int x, int y, int z, uint32_t color, const char* text)
 {

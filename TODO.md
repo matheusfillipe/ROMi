@@ -1,0 +1,7 @@
+- [x] i18n
+- [ ] issue where games will just restart ps3 instantly
+- [ ] slow download speeds
+- [ ] change background image
+- [x] change song
+- [ ] Mark multiple items for download simultaneously
+- [ ] ps3 background download like pkgi reboot to download thing queue (not sure if possible to unzip and son. we might need to mark them as something to remember to open romi later to finish installation

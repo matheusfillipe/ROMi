@@ -332,19 +332,6 @@ int display_ttf_string(int posx, int posy, const char *string, u32 color, u32 bk
 
         if(*ustring == 32 || *ustring == 9) {posx += sw>>1; ustring++; continue;}
 
-        // Handle special UI markers BEFORE UTF-8 decoding
-        // These are single-byte characters that need special rendering
-        u8 raw_byte = *ustring;
-        if(raw_byte == 0x04 || raw_byte == 0x09 || raw_byte == 0x1e || 
-           raw_byte == 0x1f || raw_byte == 0xaf || raw_byte == 0xfa || 
-           raw_byte == 0xfb || raw_byte == 0xfc || raw_byte == 0xfd) {
-            // Render marker using bitmap font system (original method)
-            romi_draw_marker_char(posx, posy, Z_ttf, color, raw_byte);
-            posx += sw;
-            ustring++;
-            continue;
-        }
-
         if(*ustring & 128) {
             m = 1;
 

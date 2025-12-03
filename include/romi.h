@@ -156,7 +156,7 @@ void romi_draw_fill_rect_z(int x, int y, int z, int w, int h, uint32_t color);
 void romi_draw_text(int x, int y, uint32_t color, const char* text);
 void romi_draw_text_z(int x, int y, int z, uint32_t color, const char* text);
 void romi_draw_text_ttf(int x, int y, int z, uint32_t color, const char* text);
-int romi_text_width_ttf(const char* text);
 void romi_draw_marker_char(int x, int y, int z, uint32_t color, uint8_t marker);
+int romi_text_width_ttf(const char* text);
 int romi_text_width(const char* text);
 int romi_text_height(const char* text);

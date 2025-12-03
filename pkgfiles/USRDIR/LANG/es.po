@@ -173,3 +173,7 @@ msgstr "Confirmar"
 
 msgid "Back"
 msgstr "Volver"
+
+# Dialog strings from romi_dialog.c
+msgid "Extension"
+msgstr "Extensión"

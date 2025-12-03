@@ -173,3 +173,7 @@ msgstr "Enter"
 
 msgid "Back"
 msgstr "Takaisin"
+
+# Dialog strings from romi_dialog.c  
+msgid "Extension"
+msgstr "Tiedostopääte"

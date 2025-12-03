@@ -392,3 +392,7 @@ msgstr "DL bezposr."
 
 #msgid "---translated by---"
 #msgstr "DEX357, PoliPyc, olokos"
+
+# Dialog strings from romi_dialog.c
+msgid "Extension"
+msgstr "Rozszerzenie"

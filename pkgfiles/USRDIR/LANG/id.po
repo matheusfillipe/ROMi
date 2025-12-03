@@ -391,3 +391,6 @@ msgstr "Unduh langsung"
 
 #msgid "---translated by---"
 #msgstr "Jeremy Belpois (Fajar Maulana)"
+# Dialog strings from romi_dialog.c
+msgid "Extension"
+msgstr "Ekstensi"

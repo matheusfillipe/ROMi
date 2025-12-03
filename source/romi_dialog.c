@@ -129,10 +129,12 @@ void romi_dialog_details(DbItem *item, const char* content_type)
     if (item->url)
     {
         const char* slash = romi_strrchr(item->url, '/');
-        if (slash)
-            romi_strncpy(dialog_extra, sizeof(dialog_extra), slash + 1);
+        const char* filename = slash ? slash + 1 : item->url;
+        const char* ext = romi_strrchr(filename, '.');
+        if (ext)
+            romi_snprintf(dialog_extra, sizeof(dialog_extra), "%s: %s", _("Extension"), ext);
         else
-            romi_strncpy(dialog_extra, sizeof(dialog_extra), item->url);
+            dialog_extra[0] = 0;
     }
     else
     {
@@ -374,7 +376,7 @@ void romi_do_dialog(romi_input* input)
 
         if (local_extra[0])
         {
-            romi_draw_text_z(ROMI_DIALOG_HMARGIN + ROMI_DIALOG_PADDING, ROMI_DIALOG_VMARGIN + ROMI_DIALOG_PADDING + font_height*6, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, local_extra);
+            romi_draw_text_z(ROMI_DIALOG_HMARGIN + ROMI_DIALOG_PADDING, ROMI_DIALOG_VMARGIN + ROMI_DIALOG_PADDING + font_height*5, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, local_extra);
         }
 
         if (local_allow_close)
