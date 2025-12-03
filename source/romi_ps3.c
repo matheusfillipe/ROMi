@@ -1236,6 +1236,78 @@ int romi_text_height(const char* text)
     return ROMI_FONT_HEIGHT + ROMI_FONT_SHADOW+1;
 }
 
+char* romi_truncate_text(char* dest, size_t dest_size, const char* src, int max_width)
+{
+    if (!src || !dest || dest_size == 0)
+    {
+        if (dest && dest_size > 0)
+            dest[0] = '\0';
+        return dest;
+    }
+
+    int ellipsis_width = ROMI_FONT_WIDTH * 3;
+
+    if (romi_text_width(src) <= max_width)
+    {
+        romi_strncpy(dest, dest_size, src);
+        return dest;
+    }
+
+    if (max_width < ellipsis_width)
+    {
+        dest[0] = '\0';
+        return dest;
+    }
+
+    int available_width = max_width - ellipsis_width;
+    size_t len = 0;
+    const uint8_t* utext = (const uint8_t*)src;
+
+    while (*utext && len + 4 < dest_size)
+    {
+        const uint8_t* next = utext;
+
+        if (*next & 0x80)
+        {
+            if ((*next & 0xE0) == 0xC0)
+                next += 2;
+            else if ((*next & 0xF0) == 0xE0)
+                next += 3;
+            else if ((*next & 0xF8) == 0xF0)
+                next += 4;
+            else
+                next++;
+        }
+        else
+        {
+            next++;
+        }
+
+        size_t char_bytes = next - utext;
+        char temp[dest_size];
+        romi_memcpy(temp, src, len + char_bytes);
+        temp[len + char_bytes] = '\0';
+
+        if (romi_text_width(temp) > available_width)
+            break;
+
+        romi_memcpy(dest + len, utext, char_bytes);
+        len += char_bytes;
+        utext = next;
+    }
+
+    dest[len] = '\0';
+    if (len + 3 < dest_size)
+    {
+        dest[len] = '.';
+        dest[len + 1] = '.';
+        dest[len + 2] = '.';
+        dest[len + 3] = '\0';
+    }
+
+    return dest;
+}
+
 int romi_validate_url(const char* url)
 {
     if (url[0] == 0)

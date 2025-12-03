@@ -160,3 +160,4 @@ void romi_draw_marker_char(int x, int y, int z, uint32_t color, uint8_t marker);
 int romi_text_width_ttf(const char* text);
 int romi_text_width(const char* text);
 int romi_text_height(const char* text);
+char* romi_truncate_text(char* dest, size_t dest_size, const char* src, int max_width);

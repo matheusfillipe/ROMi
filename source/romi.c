@@ -418,9 +418,10 @@ static void romi_do_main(romi_input* input)
         romi_draw_text(VITA_WIDTH - (ROMI_MAIN_SCROLL_WIDTH + ROMI_MAIN_SCROLL_PADDING + ROMI_MAIN_HMARGIN + sizew), y, color, size_str);
         romi_clip_remove();
 
-        romi_clip_set(col_name, y, VITA_WIDTH - ROMI_MAIN_SCROLL_WIDTH - ROMI_MAIN_SCROLL_PADDING - ROMI_MAIN_COLUMN_PADDING - sizew - col_name, line_height);
-        romi_draw_text_ttf(0, 0, ROMI_FONT_Z, color, item->name);
-        romi_clip_remove();
+        int name_width = VITA_WIDTH - ROMI_MAIN_SCROLL_WIDTH - ROMI_MAIN_SCROLL_PADDING - ROMI_MAIN_COLUMN_PADDING - sizew - col_name;
+        char truncated_name[512];
+        romi_truncate_text(truncated_name, sizeof(truncated_name), item->name, name_width);
+        romi_draw_text_ttf(col_name, y, ROMI_FONT_Z, color, truncated_name);
 
         y += font_height + ROMI_MAIN_ROW_PADDING;
         if (y > VITA_HEIGHT - (font_height + ROMI_MAIN_HLINE_EXTRA*6 + ROMI_MAIN_VMARGIN))
@@ -530,9 +531,10 @@ static void romi_do_head(void)
 
         romi_snprintf(text, sizeof(text), ">> %s <<", search_text);
 
-        romi_clip_set(left, ROMI_MAIN_VMARGIN, VITA_WIDTH - right - left, font_height + ROMI_MAIN_HLINE_EXTRA);
-        romi_draw_text((VITA_WIDTH - romi_text_width(text)) / 2, ROMI_MAIN_VMARGIN, ROMI_COLOR_TEXT_TAIL, text);
-        romi_clip_remove();
+        char truncated_search[256];
+        int available_search_width = VITA_WIDTH - right - left;
+        romi_truncate_text(truncated_search, sizeof(truncated_search), text, available_search_width);
+        romi_draw_text((VITA_WIDTH - romi_text_width(truncated_search)) / 2, ROMI_MAIN_VMARGIN, ROMI_COLOR_TEXT_TAIL, truncated_search);
     }
 }
 
@@ -567,9 +569,10 @@ static void romi_do_tail(void)
     else
         romi_snprintf(text, sizeof(text), "%s %s  " ROMI_UTF8_T " %s  " ROMI_UTF8_S " %s  %s %s", romi_get_ok_str(), _("Download"), _("Menu"), _("Details"), romi_get_cancel_str(), _("Exit"));
 
-    romi_clip_set(left, bottom_y, VITA_WIDTH - right - left, VITA_HEIGHT - bottom_y);
-    romi_draw_text_z((VITA_WIDTH - romi_text_width(text)) / 2, bottom_y, ROMI_FONT_Z, ROMI_COLOR_TEXT_TAIL, text);
-    romi_clip_remove();
+    char truncated_text[256];
+    int available_center_width = VITA_WIDTH - right - left;
+    romi_truncate_text(truncated_text, sizeof(truncated_text), text, available_center_width);
+    romi_draw_text_z((VITA_WIDTH - romi_text_width(truncated_text)) / 2, bottom_y, ROMI_FONT_Z, ROMI_COLOR_TEXT_TAIL, truncated_text);
 }
 
 static void romi_do_error(void)

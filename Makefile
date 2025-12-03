@@ -52,9 +52,21 @@ rpcs3-build: docker-image
 
 rpcs3-deploy: rpcs3-build rpcs3-db
 	@mkdir -p "$(RPCS3_USRDIR)/LANG"
-	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
-	@cp -v pkgfiles/USRDIR/LANG/*.po "$(RPCS3_USRDIR)/LANG/" 2>/dev/null || true
+	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/"
 	@echo "Package and databases deployed to RPCS3"
+
+rpcs3-deploy-remote: rpcs3-clean
+	@echo "Deploying RPCS3 with remote database configuration..."
+	@mkdir -p "$(RPCS3_USRDIR)/LANG"
+	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/"
+	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
+	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > "$(RPCS3_USRDIR)/config.txt"
+	@echo ""
+	@echo "✓ RPCS3 remote database mode configured!"
+	@echo "  Database URL: https://matheusfillipe.github.io/ROMi/romi_db.tsv"
+	@echo "  Sources file: tools/sources.txt"
+	@echo "  Language files: *.yts"
+	@echo "  Package deployed to: $(RPCS3_USRDIR)"
 
 ps3-clean:
 	@echo "Cleaning old database files from PS3..."
@@ -102,7 +114,7 @@ endif
 
 # (rest of your original Makefile as before)
 
-DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
+DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy rpcs3-deploy-remote rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 ifneq ($(filter $(DOCKER_TARGETS),$(MAKECMDGOALS)),)
   PSL1GHT_SKIP := 1
 endif
