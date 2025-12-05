@@ -84,7 +84,9 @@ int romi_install(const char* titleid);
 uint32_t romi_time_msec();
 
 typedef void romi_thread_entry(void);
+typedef void romi_thread_entry_arg(void* arg);
 void romi_start_thread(const char* name, romi_thread_entry* start);
+void romi_start_thread_arg(const char* name, romi_thread_entry_arg* start, void* arg);
 void romi_thread_exit(void);
 void romi_sleep(uint32_t msec);
 

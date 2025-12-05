@@ -42,7 +42,7 @@ rpcs3-clean:
 	@rm -f "$(RPCS3_USRDIR)"/romi_*.tsv "$(RPCS3_USRDIR)/sources.txt" "$(RPCS3_USRDIR)/config.txt" "$(RPCS3_USRDIR)/romi_debug.log"
 
 rpcs3-db: rpcs3-clean
-	@mkdir -p "$(RPCS3_USRDIR)"
+	# @mkdir -p "$(RPCS3_USRDIR)"
 	@cp -v tools/databases/*.tsv "$(RPCS3_USRDIR)/" 2>/dev/null || true
 	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
 
@@ -247,7 +247,7 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
 					$(LIBPSL1GHT_LIB) -L$(PORTLIBS)/lib
 
 export OUTPUT	:=	$(CURDIR)/$(TARGET)
-.PHONY: $(BUILD) clean
+.PHONY: $(BUILD) clean compile-translations
 
 
 #---------------------------------------------------------------------------------
@@ -265,7 +265,17 @@ run:
 	ps3load $(OUTPUT).self
 
 #---------------------------------------------------------------------------------
-pkg:	$(BUILD) $(OUTPUT).pkg
+# Compile translations from .po to .yts (ALWAYS runs before packaging)
+#---------------------------------------------------------------------------------
+compile-translations:
+	@echo "Compiling translations..."
+	@cd $(PKGFILES)/USRDIR/LANG && for po in *.po; do \
+		python3 $(CURDIR)/tools/po_to_yts.py "$$po" "$${po%.po}.yts" || true; \
+	done
+	@echo "Translations compiled successfully"
+
+#---------------------------------------------------------------------------------
+pkg:	$(BUILD) compile-translations $(OUTPUT).pkg
 
 #---------------------------------------------------------------------------------
 

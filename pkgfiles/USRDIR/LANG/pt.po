@@ -66,6 +66,8 @@ msgstr "Opções:"
 msgid "Music"
 msgstr "Música"
 
+msgid "Storage:"
+msgstr "Armazenamento:"
 msgid "Refresh..."
 msgstr "Atualizar..."
 
@@ -106,6 +108,8 @@ msgstr "Espaço insuficiente no disco"
 msgid "ROM already exists, download again?"
 msgstr "ROM já existe, descarregar novamente?"
 
+msgid "Storage:"
+msgstr "Armazenamento:"
 msgid "Refreshing"
 msgstr "A atualizar"
 
@@ -176,3 +180,49 @@ msgstr "Voltar"
 # Dialog strings from romi_dialog.c
 msgid "Extension"
 msgstr "Extensão"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "tentar novamente/remover"
+
+msgid "cancel/remove"
+msgstr "cancelar/remover"
+
+
+msgid "Pending..."
+msgstr "Pendente..."
+
+msgid "Starting..."
+msgstr "A iniciar..."
+
+msgid "Retrying..."
+msgstr "A tentar novamente..."
+
+msgid "Completed"
+msgstr "Concluído"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgid "Failed"
+msgstr "Falhado"
+
+msgid "Download failed"
+msgstr "Download falhado"
+msgid "retry"
+msgstr "tentar novamente"
+
+msgid "remove"
+msgstr "remover"
+msgid "cancel"
+msgstr "cancelar"
+msgid "Downloads"
+msgstr "Transferências"
+msgid "hide"
+msgstr "ocultar"
+msgid "Storage Device"
+msgstr "Dispositivo de armazenamento"
+msgid "select"
+msgstr "selecionar"
+msgid "Device"
+msgstr "Device"

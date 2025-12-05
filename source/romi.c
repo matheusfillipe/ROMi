@@ -6,6 +6,7 @@
 #include "romi_download.h"
 #include "romi_utils.h"
 #include "romi_style.h"
+#include "romi_queue.h"
 
 #include <stddef.h>
 #include <mini18n.h>
@@ -91,48 +92,6 @@ static void romi_refresh_thread(void)
     {
         state = StateError;
     }
-
-    romi_thread_exit();
-}
-
-static void download_progress(const char* status, uint64_t downloaded, uint64_t total)
-{
-    if (total > 0)
-    {
-        int percent = (int)(downloaded * 100 / total);
-        romi_dialog_set_progress(status, percent);
-    }
-    else
-    {
-        romi_dialog_set_progress(status, -1);
-    }
-}
-
-static void romi_download_thread(void)
-{
-    DbItem* item = romi_db_get(selected_item);
-
-    LOG("download thread start");
-
-    romi_sleep(300);
-
-    romi_dialog_set_progress_title(item->name);
-
-    romi_lock_process();
-    if (romi_download_rom(item, download_progress))
-    {
-        romi_dialog_message(item->name, _("Successfully downloaded"));
-        LOG("download completed!");
-    }
-    romi_unlock_process();
-
-    if (romi_dialog_is_cancelled())
-    {
-        romi_dialog_close();
-    }
-
-    item->presence = PresenceUnknown;
-    state = StateMain;
 
     romi_thread_exit();
 }
@@ -229,15 +188,6 @@ static const char* region_str(RomiRegion r)
 static void cb_dialog_exit(int res)
 {
     state = StateTerminate;
-}
-
-static void cb_dialog_download(int res)
-{
-    DbItem* item = romi_db_get(selected_item);
-
-    item->presence = PresenceMissing;
-    romi_dialog_start_progress(_("Downloading..."), _("Preparing..."), 0);
-    romi_start_thread("download_thread", &romi_download_thread);
 }
 
 static int check_rom_installed(DbItem* item)
@@ -465,16 +415,11 @@ static void romi_do_main(romi_input* input)
             LOG("[%s] %s - no free space", platform_str(item->platform), item->name);
             romi_dialog_error(_("Not enough free space on HDD"));
         }
-        else if (item->presence == PresenceInstalled)
-        {
-            LOG("[%s] %s - already installed", platform_str(item->platform), item->name);
-            romi_dialog_ok_cancel(item->name, _("ROM already exists, download again?"), &cb_dialog_download);
-        }
         else
         {
-            LOG("[%s] %s - starting download", platform_str(item->platform), item->name);
-            romi_dialog_start_progress(_("Downloading..."), _("Preparing..."), 0);
-            romi_start_thread("download_thread", &romi_download_thread);
+            LOG("[%s] %s - adding to download queue", platform_str(item->platform), item->name);
+            romi_queue_add(item);
+            romi_dialog_open_download_queue();
         }
     }
     else if (input && (input->pressed & ROMI_BUTTON_T))
@@ -715,6 +660,10 @@ int main(int argc, const char* argv[])
                 if (mres == MenuResultSearch)
                 {
                     romi_dialog_input_text(_("Search"), search_text);
+                }
+                else if (mres == MenuResultDownloads)
+                {
+                    romi_dialog_open_download_queue();
                 }
                 else if (mres == MenuResultSearchClear)
                 {

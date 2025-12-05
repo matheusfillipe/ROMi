@@ -66,6 +66,9 @@ msgstr "Options :"
 msgid "Music"
 msgstr "Musique"
 
+msgid "Storage:"
+msgstr "Stockage:"
+
 msgid "Refresh..."
 msgstr "Actualiser..."
 
@@ -177,3 +180,49 @@ msgstr "Retour"
 # Dialog strings from romi_dialog.c
 msgid "Extension"
 msgstr "Extension"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "réessayer/supprimer"
+
+msgid "cancel/remove"
+msgstr "annuler/supprimer"
+
+
+msgid "Pending..."
+msgstr "En attente..."
+
+msgid "Starting..."
+msgstr "Démarrage..."
+
+msgid "Retrying..."
+msgstr "Nouvelle tentative..."
+
+msgid "Completed"
+msgstr "Terminé"
+
+msgid "Cancelled"
+msgstr "Annulé"
+
+msgid "Failed"
+msgstr "Échoué"
+
+msgid "Download failed"
+msgstr "Téléchargement échoué"
+msgid "retry"
+msgstr "réessayer"
+
+msgid "remove"
+msgstr "supprimer"
+msgid "cancel"
+msgstr "annuler"
+msgid "Downloads"
+msgstr "Téléchargements"
+msgid "hide"
+msgstr "masquer"
+msgid "Storage Device"
+msgstr "Périphérique de stockage"
+msgid "select"
+msgstr "sélectionner"
+msgid "Device"
+msgstr "Device"

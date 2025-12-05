@@ -6,6 +6,7 @@
 
 typedef enum {
     MenuResultSearch,
+    MenuResultDownloads,
     MenuResultSearchClear,
     MenuResultAccept,
     MenuResultCancel,

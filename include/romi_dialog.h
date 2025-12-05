@@ -32,6 +32,9 @@ void romi_dialog_update_progress(const char* text, const char* extra, const char
 
 void romi_dialog_close(void);
 
+void romi_dialog_open_download_queue(void);
+void romi_dialog_open_device_selection(void);
+
 void romi_do_dialog(romi_input* input);
 
 int romi_msg_dialog(int tdialog, const char * str);

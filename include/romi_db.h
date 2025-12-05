@@ -91,6 +91,8 @@ typedef struct Config {
     uint8_t music;
     char language[3];
     char db_update_url[1024];
+    int storage_device_index;
+    char storage_device_path[256];
 } Config;
 
 int romi_db_reload(char* error, uint32_t error_size);

@@ -29,6 +29,10 @@
 #define ROMI_UTF8_CHECK_ON  "\x04"//"\xe2\x97\x8f" // 0x25cf
 #define ROMI_UTF8_CHECK_OFF "\x09"//"\xe2\x97\x8b" // 0x25cb
 
+#define ROMI_UTF8_ARROW_DOWN "\x1f" // Down arrow (reuse sort desc)
+#define ROMI_UTF8_CHECK      "\x04" // Check mark (reuse check on)
+#define ROMI_UTF8_SQUARE     "\xfd" // Square (reuse S button)
+
 #define ROMI_COLOR_DIALOG_BACKGROUND    ROMI_COLOR(48, 48, 48)
 #define ROMI_COLOR_MENU_BORDER          ROMI_COLOR(80, 80, 255)
 #define ROMI_COLOR_MENU_BACKGROUND      ROMI_COLOR(48, 48, 48)
@@ -80,6 +84,6 @@
 #define ROMI_MENU_Z            900
 #define ROMI_MENU_TEXT_Z       800
 #define ROMI_MENU_WIDTH        150
-#define ROMI_MENU_HEIGHT       480
+#define ROMI_MENU_HEIGHT       (VITA_HEIGHT - 2*ROMI_MAIN_VMARGIN)
 #define ROMI_MENU_LEFT_PADDING 20
-#define ROMI_MENU_TOP_PADDING  40
+#define ROMI_MENU_TOP_PADDING  30

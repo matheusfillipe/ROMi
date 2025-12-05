@@ -2,6 +2,7 @@
 #include "romi_config.h"
 #include "romi_utils.h"
 #include "romi.h"
+#include "romi_devices.h"
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -28,19 +29,19 @@ static const char* platform_names[] = {
     "Genesis", "SMS", "MAME"
 };
 
-static const char* platform_folders[] = {
-    "/dev_hdd0/ROMS",
-    "/dev_hdd0/PSXISO",
-    "/dev_hdd0/PS2ISO",
-    "/dev_hdd0/PS3ISO",
-    "/dev_hdd0/ROMS/NES",
-    "/dev_hdd0/ROMS/SNES",
-    "/dev_hdd0/ROMS/GB",
-    "/dev_hdd0/ROMS/GBC",
-    "/dev_hdd0/ROMS/GBA",
-    "/dev_hdd0/ROMS/Genesis",
-    "/dev_hdd0/ROMS/SMS",
-    "/dev_hdd0/ROMS/MAME"
+static const char* platform_suffixes[] = {
+    "ROMS",
+    "PSXISO",
+    "PS2ISO",
+    "PS3ISO",
+    "ROMS/NES",
+    "ROMS/SNES",
+    "ROMS/GB",
+    "ROMS/GBC",
+    "ROMS/GBA",
+    "ROMS/Genesis",
+    "ROMS/SMS",
+    "ROMS/MAME"
 };
 
 #define MAX_URL_LENGTH 512
@@ -88,8 +89,18 @@ const char* romi_platform_name(RomiPlatform p)
 
 const char* romi_platform_folder(RomiPlatform p)
 {
-    if (p >= PlatformCount) return platform_folders[0];
-    return platform_folders[p];
+    static char path_buffer[512];
+    const char* base = romi_devices_get_base_path();
+    const char* suffix;
+
+    if (p >= PlatformCount) {
+        suffix = platform_suffixes[0];
+    } else {
+        suffix = platform_suffixes[p];
+    }
+
+    romi_snprintf(path_buffer, sizeof(path_buffer), "%s%s", base, suffix);
+    return path_buffer;
 }
 
 uint32_t romi_platform_filter(RomiPlatform p)

@@ -66,6 +66,8 @@ msgstr "Seçenekler:"
 msgid "Music"
 msgstr "Müzik"
 
+msgid "Storage:"
+msgstr "Depolama:"
 msgid "Refresh..."
 msgstr "Yenile..."
 
@@ -106,6 +108,8 @@ msgstr "HDD'de yeterli boş alan yok"
 msgid "ROM already exists, download again?"
 msgstr "ROM zaten var, tekrar indirilsin mi?"
 
+msgid "Storage:"
+msgstr "Depolama:"
 msgid "Refreshing"
 msgstr "Yenileniyor"
 
@@ -177,3 +181,49 @@ msgstr "Geri"
 # Dialog strings from romi_dialog.c
 msgid "Extension"
 msgstr "Uzantı"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "yeniden dene/kaldır"
+
+msgid "cancel/remove"
+msgstr "iptal et/kaldır"
+
+
+msgid "Pending..."
+msgstr "Bekliyor..."
+
+msgid "Starting..."
+msgstr "Başlatılıyor..."
+
+msgid "Retrying..."
+msgstr "Yeniden deneniyor..."
+
+msgid "Completed"
+msgstr "Tamamlandı"
+
+msgid "Cancelled"
+msgstr "İptal edildi"
+
+msgid "Failed"
+msgstr "Başarısız"
+
+msgid "Download failed"
+msgstr "İndirme başarısız"
+msgid "retry"
+msgstr "yeniden dene"
+
+msgid "remove"
+msgstr "kaldır"
+msgid "cancel"
+msgstr "iptal et"
+msgid "Downloads"
+msgstr "İndirilenler"
+msgid "hide"
+msgstr "gizle"
+msgid "Storage Device"
+msgstr "Depolama Aygıtı"
+msgid "select"
+msgstr "seç"
+msgid "Device"
+msgstr "Device"

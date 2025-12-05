@@ -66,6 +66,8 @@ msgstr "Asetukset:"
 msgid "Music"
 msgstr "Musiikki"
 
+msgid "Storage:"
+msgstr "Tallennus:"
 msgid "Refresh..."
 msgstr "Päivitä..."
 
@@ -106,6 +108,8 @@ msgstr "Ei tarpeeksi vapaata tilaa HDD:llä"
 msgid "ROM already exists, download again?"
 msgstr "ROM on jo olemassa, lataa uudelleen?"
 
+msgid "Storage:"
+msgstr "Tallennus:"
 msgid "Refreshing"
 msgstr "Päivitetään"
 
@@ -177,3 +181,49 @@ msgstr "Takaisin"
 # Dialog strings from romi_dialog.c  
 msgid "Extension"
 msgstr "Tiedostopääte"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "yritä uudelleen/poista"
+
+msgid "cancel/remove"
+msgstr "peruuta/poista"
+
+
+msgid "Pending..."
+msgstr "Odottaa..."
+
+msgid "Starting..."
+msgstr "Aloitetaan..."
+
+msgid "Retrying..."
+msgstr "Yritetään uudelleen..."
+
+msgid "Completed"
+msgstr "Valmis"
+
+msgid "Cancelled"
+msgstr "Peruutettu"
+
+msgid "Failed"
+msgstr "Epäonnistui"
+
+msgid "Download failed"
+msgstr "Lataus epäonnistui"
+msgid "retry"
+msgstr "yritä uudelleen"
+
+msgid "remove"
+msgstr "poista"
+msgid "cancel"
+msgstr "peruuta"
+msgid "Downloads"
+msgstr "Lataukset"
+msgid "hide"
+msgstr "piilota"
+msgid "Storage Device"
+msgstr "Tallennuslaite"
+msgid "select"
+msgstr "valitse"
+msgid "Device"
+msgstr "Device"

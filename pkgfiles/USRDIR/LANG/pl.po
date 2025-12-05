@@ -123,6 +123,8 @@ msgid "Preparing..."
 msgstr "Przygotowywanie..."
 
 #: pkgi.c:504 pkgi.c:508
+msgid "Storage:"
+msgstr "Pamięć:"
 msgid "Refreshing"
 msgstr "Odswiezanie"
 
@@ -383,6 +385,8 @@ msgid "Music"
 msgstr "Muzyka"
 
 #: pkgi_menu.c:119
+msgid "Storage:"
+msgstr "Pamięć:"
 msgid "Refresh..."
 msgstr "Odswiez..."
 
@@ -396,3 +400,49 @@ msgstr "DL bezposr."
 # Dialog strings from romi_dialog.c
 msgid "Extension"
 msgstr "Rozszerzenie"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "ponów/usuń"
+
+msgid "cancel/remove"
+msgstr "anuluj/usuń"
+
+
+msgid "Pending..."
+msgstr "Oczekuje..."
+
+msgid "Starting..."
+msgstr "Rozpoczynanie..."
+
+msgid "Retrying..."
+msgstr "Ponowienie..."
+
+msgid "Completed"
+msgstr "Ukończono"
+
+msgid "Cancelled"
+msgstr "Anulowano"
+
+msgid "Failed"
+msgstr "Nie powiodło się"
+
+msgid "Download failed"
+msgstr "Pobieranie nie powiodło się"
+msgid "retry"
+msgstr "ponów"
+
+msgid "remove"
+msgstr "usuń"
+msgid "cancel"
+msgstr "anuluj"
+msgid "Downloads"
+msgstr "Pobieranie"
+msgid "hide"
+msgstr "ukryj"
+msgid "Storage Device"
+msgstr "Urządzenie pamięci masowej"
+msgid "select"
+msgstr "wybierz"
+msgid "Device"
+msgstr "Device"

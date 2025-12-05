@@ -123,6 +123,8 @@ msgid "Preparing..."
 msgstr "Mempersiapkan..."
 
 #: pkgi.c:504 pkgi.c:508
+msgid "Storage:"
+msgstr "Penyimpanan:"
 msgid "Refreshing"
 msgstr "Menyegarkan"
 
@@ -382,6 +384,8 @@ msgid "Music"
 msgstr "Musik"
 
 #: pkgi_menu.c:119
+msgid "Storage:"
+msgstr "Penyimpanan:"
 msgid "Refresh..."
 msgstr "Segarkan..."
 
@@ -394,3 +398,49 @@ msgstr "Unduh langsung"
 # Dialog strings from romi_dialog.c
 msgid "Extension"
 msgstr "Ekstensi"
+
+# Download queue strings from romi_dialog.c and romi_queue.c
+msgid "retry/remove"
+msgstr "coba lagi/hapus"
+
+msgid "cancel/remove"
+msgstr "batal/hapus"
+
+
+msgid "Pending..."
+msgstr "Menunggu..."
+
+msgid "Starting..."
+msgstr "Memulai..."
+
+msgid "Retrying..."
+msgstr "Mencoba lagi..."
+
+msgid "Completed"
+msgstr "Selesai"
+
+msgid "Cancelled"
+msgstr "Dibatalkan"
+
+msgid "Failed"
+msgstr "Gagal"
+
+msgid "Download failed"
+msgstr "Unduhan gagal"
+msgid "retry"
+msgstr "coba lagi"
+
+msgid "remove"
+msgstr "hapus"
+msgid "cancel"
+msgstr "batal"
+msgid "Downloads"
+msgstr "Unduhan"
+msgid "hide"
+msgstr "sembunyikan"
+msgid "Storage Device"
+msgstr "Perangkat Penyimpanan"
+msgid "select"
+msgstr "pilih"
+msgid "Device"
+msgstr "Device"

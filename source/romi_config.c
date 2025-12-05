@@ -105,6 +105,8 @@ void romi_load_config(Config* config)
     config->active_platform = PlatformUnknown;
     config->music = 1;
     config->db_update_url[0] = '\0';
+    config->storage_device_index = 0;
+    romi_strncpy(config->storage_device_path, sizeof(config->storage_device_path), "/dev_hdd0/");
     romi_strncpy(config->language, sizeof(config->language), romi_get_user_language());
 
     char data[4096];
@@ -157,6 +159,11 @@ void romi_load_config(Config* config)
             config->active_platform = romi_parse_platform(value);
         else if (romi_stricmp(key, "no_music") == 0)
             config->music = 0;
+        else if (romi_stricmp(key, "storage_device") == 0)
+        {
+            romi_strncpy(config->storage_device_path, sizeof(config->storage_device_path), value);
+            LOG("loaded storage device path: %s", config->storage_device_path);
+        }
     }
 }
 
@@ -236,6 +243,9 @@ void romi_save_config(const Config* config)
     { len += romi_snprintf(data + len, sizeof(data) - len, "%sMAME", sep); sep = ","; }
 
     len += romi_snprintf(data + len, sizeof(data) - len, "\n");
+
+    if (config->storage_device_path[0] != '\0')
+        len += romi_snprintf(data + len, sizeof(data) - len, "storage_device %s\n", config->storage_device_path);
 
     char path[256];
     romi_snprintf(path, sizeof(path), "%s/config.txt", romi_get_config_folder());

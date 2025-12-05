@@ -2,6 +2,9 @@
 #include "romi_style.h"
 #include "romi_utils.h"
 #include "romi.h"
+#include "romi_queue.h"
+#include "romi_devices.h"
+#include "romi_config.h"
 
 #include <sysutil/msg.h>
 #include <mini18n.h>
@@ -12,7 +15,9 @@ typedef enum {
     DialogError,
     DialogProgress,
     DialogOkCancel,
-    DialogDetails
+    DialogDetails,
+    DialogDownloadQueue,
+    DialogDeviceSelection
 } DialogType;
 
 static DialogType dialog_type;
@@ -29,6 +34,18 @@ static romi_dialog_callback_t dialog_callback = NULL;
 static int32_t dialog_width;
 static int32_t dialog_height;
 static int32_t dialog_delta;
+
+static uint32_t queue_selected_row = 0;
+static uint32_t queue_scroll_offset = 0;
+static uint32_t queue_visible_rows = 0;
+
+static uint32_t device_selected_row = 0;
+static uint32_t device_scroll_offset = 0;
+
+#define ROMI_QUEUE_ROW_HEIGHT 50
+#define ROMI_QUEUE_MAX_VISIBLE_ROWS 2
+#define ROMI_DEVICE_ROW_HEIGHT 40
+#define ROMI_DEVICE_MAX_VISIBLE_ROWS 8
 
 volatile int msg_dialog_action = 0;
 
@@ -208,6 +225,28 @@ void romi_dialog_close(void)
     dialog_delta = -1;
 }
 
+void romi_dialog_open_download_queue(void)
+{
+    romi_dialog_lock();
+    romi_dialog_data_init(DialogDownloadQueue, _("Download Queue"), "");
+    queue_selected_row = 0;
+    queue_scroll_offset = 0;
+    queue_visible_rows = 0;
+    romi_dialog_unlock();
+}
+
+void romi_dialog_open_device_selection(void)
+{
+    romi_dialog_lock();
+    romi_dialog_data_init(DialogDeviceSelection, _("Storage Device"), "");
+    romi_devices_scan();
+    device_selected_row = romi_devices_get_selected_index();
+    device_scroll_offset = 0;
+    if (device_selected_row >= ROMI_DEVICE_MAX_VISIBLE_ROWS)
+        device_scroll_offset = device_selected_row - ROMI_DEVICE_MAX_VISIBLE_ROWS + 1;
+    romi_dialog_unlock();
+}
+
 void romi_do_dialog(romi_input* input)
 {
     romi_dialog_lock();
@@ -229,6 +268,113 @@ void romi_do_dialog(romi_input* input)
             {
                 dialog_callback(MDIALOG_OK);
                 dialog_callback = NULL;
+            }
+        }
+        else if (dialog_type == DialogDownloadQueue)
+        {
+            uint32_t queue_count = romi_queue_get_count();
+
+            // Up/Down navigation
+            if ((input->pressed & ROMI_BUTTON_UP) && queue_selected_row > 0)
+            {
+                queue_selected_row--;
+                if (queue_selected_row < queue_scroll_offset)
+                    queue_scroll_offset = queue_selected_row;
+            }
+            else if ((input->pressed & ROMI_BUTTON_DOWN) && queue_selected_row < queue_count - 1)
+            {
+                queue_selected_row++;
+                if (queue_selected_row >= queue_scroll_offset + ROMI_QUEUE_MAX_VISIBLE_ROWS)
+                    queue_scroll_offset = queue_selected_row - ROMI_QUEUE_MAX_VISIBLE_ROWS + 1;
+            }
+
+            // Square button: Close dialog, keep downloads running
+            if (input->pressed & ROMI_BUTTON_S)
+            {
+                dialog_delta = -1;
+            }
+
+            // X button: Retry failed or remove completed
+            if (input->pressed & romi_ok_button())
+            {
+                DownloadQueueEntry* entry = romi_queue_get_entry(queue_selected_row);
+                if (entry)
+                {
+                    if (entry->status == DownloadStatusFailed || entry->status == DownloadStatusCancelled)
+                    {
+                        romi_queue_retry(entry);
+                    }
+                    else if (entry->status == DownloadStatusCompleted)
+                    {
+                        romi_queue_remove(entry);
+                        if (queue_selected_row >= romi_queue_get_count() && queue_selected_row > 0)
+                            queue_selected_row--;
+                        if (romi_queue_get_count() == 0)
+                            dialog_delta = -1;
+                    }
+                }
+            }
+
+            // Circle button: Cancel download or remove entry
+            if (input->pressed & romi_cancel_button())
+            {
+                DownloadQueueEntry* entry = romi_queue_get_entry(queue_selected_row);
+                if (entry)
+                {
+                    if (entry->status == DownloadStatusDownloading)
+                    {
+                        romi_queue_cancel(entry);
+                    }
+                    else
+                    {
+                        romi_queue_remove(entry);
+                        if (queue_selected_row >= romi_queue_get_count() && queue_selected_row > 0)
+                            queue_selected_row--;
+                        if (romi_queue_get_count() == 0)
+                            dialog_delta = -1;
+                    }
+                }
+            }
+        }
+        else if (dialog_type == DialogDeviceSelection)
+        {
+            uint32_t device_count = romi_devices_count();
+
+            // Up/Down navigation
+            if ((input->pressed & ROMI_BUTTON_UP) && device_selected_row > 0)
+            {
+                device_selected_row--;
+                if (device_selected_row < device_scroll_offset)
+                    device_scroll_offset = device_selected_row;
+            }
+            else if ((input->pressed & ROMI_BUTTON_DOWN) && device_selected_row < device_count - 1)
+            {
+                device_selected_row++;
+                if (device_selected_row >= device_scroll_offset + ROMI_DEVICE_MAX_VISIBLE_ROWS)
+                    device_scroll_offset = device_selected_row - ROMI_DEVICE_MAX_VISIBLE_ROWS + 1;
+            }
+
+            // X button: Select device
+            if (input->pressed & romi_ok_button())
+            {
+                romi_devices_set_selected(device_selected_row);
+
+                Config config;
+                romi_load_config(&config);
+                const RomiDevice* device = romi_devices_get_selected();
+                if (device) {
+                    romi_strncpy(config.storage_device_path, sizeof(config.storage_device_path), device->path);
+                    romi_save_config(&config);
+                    LOG("saved device path to config: %s", device->path);
+                }
+
+                dialog_delta = -1;
+            }
+
+            // Circle button: Cancel selection
+            if (input->pressed & romi_cancel_button())
+            {
+                dialog_delta = -1;
             }
         }
     }
@@ -383,6 +529,211 @@ void romi_do_dialog(romi_input* input)
         {
             char text[256];
             romi_snprintf(text, sizeof(text), _("press %s to close"), romi_ok_button() == ROMI_BUTTON_X ? ROMI_UTF8_X : ROMI_UTF8_O);
+            romi_draw_text_z((VITA_WIDTH - romi_text_width(text)) / 2, ROMI_DIALOG_VMARGIN + h - 2 * font_height, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, text);
+        }
+    }
+    else if (local_type == DialogDownloadQueue)
+    {
+        int y_offset = ROMI_DIALOG_VMARGIN + ROMI_DIALOG_PADDING + font_height * 2;
+        uint32_t queue_count = romi_queue_get_count();
+        uint32_t visible_rows = min32(queue_count, ROMI_QUEUE_MAX_VISIBLE_ROWS);
+
+        // Render queue entries
+        for (uint32_t i = 0; i < visible_rows; i++)
+        {
+            uint32_t entry_index = queue_scroll_offset + i;
+            DownloadQueueEntry* entry = romi_queue_get_entry(entry_index);
+
+            if (!entry)
+                break;
+
+            int row_y = y_offset + (i * ROMI_QUEUE_ROW_HEIGHT);
+            int row_x = ROMI_DIALOG_HMARGIN + ROMI_DIALOG_PADDING;
+            int row_width = w - 2 * ROMI_DIALOG_PADDING;
+            
+            // Draw selection highlight BEHIND text (higher Z = further back)
+            if (entry_index == queue_selected_row)
+            {
+                romi_draw_fill_rect_z(row_x, row_y, ROMI_DIALOG_TEXT_Z + 10, row_width, ROMI_QUEUE_ROW_HEIGHT - 2, ROMI_COLOR_SELECTED_BACKGROUND);
+            }
+
+            // Build status text first to calculate its width
+            char status_text[64];
+            if (entry->status == DownloadStatusDownloading && entry->speed > 0)
+            {
+                if (entry->speed > 1024 * 1024)
+                    romi_snprintf(status_text, sizeof(status_text), "%.1f MB/s", entry->speed / (1024.0f * 1024.0f));
+                else if (entry->speed > 1024)
+                    romi_snprintf(status_text, sizeof(status_text), "%.1f KB/s", entry->speed / 1024.0f);
+                else
+                    romi_snprintf(status_text, sizeof(status_text), "%u B/s", entry->speed);
+            }
+            else
+            {
+                romi_strncpy(status_text, sizeof(status_text), entry->status_text);
+            }
+            int status_text_width = romi_text_width(status_text);
+
+            // Draw filename - truncate to avoid overlap with status text
+            char filename_buf[128];
+            const char* filename = entry->item ? entry->item->name : "NO ITEM";
+            int filename_max_width = row_width - status_text_width - 20;  // 20px gap between name and status
+            romi_truncate_text(filename_buf, sizeof(filename_buf), filename, filename_max_width);
+            romi_draw_text_z(row_x + 5, row_y + 3, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, filename_buf);
+
+            // Draw status text on right side
+            romi_draw_text_z(row_x + row_width - status_text_width - 5, row_y + 3, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, status_text);
+
+            // Draw progress bar for active downloads (below the title text)
+            if ((entry->status == DownloadStatusDownloading || entry->status == DownloadStatusExtracting) && entry->total > 0)
+            {
+                int progress_y = row_y + 22;
+                int progress_width = row_width - 80;
+                float progress_ratio = (float)entry->downloaded / (float)entry->total;
+                if (progress_ratio > 1.0f) progress_ratio = 1.0f;  // Clamp to 100% max
+                int percent = (int)(progress_ratio * 100);
+
+                // Progress bar background (behind fill)
+                romi_draw_fill_rect_z(row_x + 5, progress_y, ROMI_DIALOG_TEXT_Z + 5, progress_width, 10, ROMI_COLOR_PROGRESS_BACKGROUND);
+                // Progress bar fill (in front of background)
+                romi_draw_fill_rect_z(row_x + 5, progress_y, ROMI_DIALOG_TEXT_Z, (int)(progress_width * progress_ratio), 10, ROMI_COLOR_PROGRESS_BAR);
+                
+                // Progress percentage on the right side
+                char percent_text[16];
+                romi_snprintf(percent_text, sizeof(percent_text), "%d%%", percent);
+                romi_draw_text_z(row_x + row_width - 50, progress_y - 2, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, percent_text);
+            }
+        }
+
+        // Draw scrollbar if needed
+        if (queue_count > ROMI_QUEUE_MAX_VISIBLE_ROWS)
+        {
+            int scrollbar_x = ROMI_DIALOG_HMARGIN + w - 5;
+            int scrollbar_y = y_offset;
+            int scrollbar_height = ROMI_QUEUE_MAX_VISIBLE_ROWS * ROMI_QUEUE_ROW_HEIGHT;
+            int thumb_height = max32(20, (ROMI_QUEUE_MAX_VISIBLE_ROWS * scrollbar_height) / queue_count);
+            int thumb_y = scrollbar_y + ((queue_scroll_offset * scrollbar_height) / queue_count);
+
+            romi_draw_fill_rect_z(scrollbar_x, scrollbar_y, ROMI_DIALOG_TEXT_Z, 3, scrollbar_height, ROMI_COLOR_PROGRESS_BACKGROUND);
+            romi_draw_fill_rect_z(scrollbar_x, thumb_y, ROMI_DIALOG_TEXT_Z, 3, thumb_height, ROMI_COLOR_PROGRESS_BAR);
+        }
+
+        // Instructions at bottom - dynamic based on selected entry status
+        if (local_allow_close)
+        {
+            char text[256];
+            DownloadQueueEntry* selected = romi_queue_get_entry(queue_selected_row);
+
+            if (selected)
+            {
+                const char* ok_button_str = romi_ok_button() == ROMI_BUTTON_X ? ROMI_UTF8_X : ROMI_UTF8_O;
+                const char* cancel_button_str = romi_cancel_button() == ROMI_BUTTON_O ? ROMI_UTF8_O : ROMI_UTF8_X;
+
+                if (selected->status == DownloadStatusFailed || selected->status == DownloadStatusCancelled)
+                {
+                    // X=retry, O=remove, Square=hide
+                    romi_snprintf(text, sizeof(text), "%s %s  %s %s  %s %s",
+                        ok_button_str, _("retry"),
+                        cancel_button_str, _("remove"),
+                        ROMI_UTF8_SQUARE, _("hide"));
+                }
+                else if (selected->status == DownloadStatusDownloading)
+                {
+                    // O=cancel, Square=hide
+                    romi_snprintf(text, sizeof(text), "%s %s  %s %s",
+                        cancel_button_str, _("cancel"),
+                        ROMI_UTF8_SQUARE, _("hide"));
+                }
+                else if (selected->status == DownloadStatusCompleted)
+                {
+                    // X=remove, Square=hide
+                    romi_snprintf(text, sizeof(text), "%s %s  %s %s",
+                        ok_button_str, _("remove"),
+                        ROMI_UTF8_SQUARE, _("hide"));
+                }
+                else
+                {
+                    // Default: O=remove, Square=hide
+                    romi_snprintf(text, sizeof(text), "%s %s  %s %s",
+                        cancel_button_str, _("remove"),
+                        ROMI_UTF8_SQUARE, _("hide"));
+                }
+            }
+            else
+            {
+                // No selection, just show hide
+                romi_snprintf(text, sizeof(text), "%s %s",
+                    ROMI_UTF8_SQUARE, _("hide"));
+            }
+
+            romi_draw_text_z((VITA_WIDTH - romi_text_width(text)) / 2, ROMI_DIALOG_VMARGIN + h - 2 * font_height, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, text);
+        }
+    }
+    else if (local_type == DialogDeviceSelection)
+    {
+        int y_offset = ROMI_DIALOG_VMARGIN + ROMI_DIALOG_PADDING + font_height * 2;
+        uint32_t device_count = romi_devices_count();
+        uint32_t visible_rows = min32(device_count, ROMI_DEVICE_MAX_VISIBLE_ROWS);
+
+        // Render device entries
+        for (uint32_t i = 0; i < visible_rows; i++)
+        {
+            uint32_t device_index = device_scroll_offset + i;
+            const RomiDevice* device = romi_devices_get(device_index);
+
+            if (!device)
+                break;
+
+            int row_y = y_offset + (i * ROMI_DEVICE_ROW_HEIGHT);
+            int row_x = ROMI_DIALOG_HMARGIN + ROMI_DIALOG_PADDING;
+            int row_width = w - 2 * ROMI_DIALOG_PADDING;
+
+            // Draw selection highlight
+            if (device_index == device_selected_row)
+            {
+                romi_draw_fill_rect_z(row_x, row_y, ROMI_DIALOG_TEXT_Z + 10, row_width, ROMI_DEVICE_ROW_HEIGHT - 2, ROMI_COLOR_SELECTED_BACKGROUND);
+            }
+
+            // Draw device path
+            char device_text[256];
+            if (device->available)
+            {
+                romi_snprintf(device_text, sizeof(device_text), "%s", device->path);
+            }
+            else
+            {
+                romi_snprintf(device_text, sizeof(device_text), "%s [unavailable]", device->path);
+            }
+
+            romi_draw_text_z(row_x + 5, row_y + 10, ROMI_DIALOG_TEXT_Z,
+                device->available ? ROMI_COLOR_TEXT_DIALOG : ROMI_COLOR_TEXT_ERROR,
+                device_text);
+        }
+
+        // Draw scrollbar if needed
+        if (device_count > ROMI_DEVICE_MAX_VISIBLE_ROWS)
+        {
+            int scrollbar_x = ROMI_DIALOG_HMARGIN + w - 5;
+            int scrollbar_y = y_offset;
+            int scrollbar_height = ROMI_DEVICE_MAX_VISIBLE_ROWS * ROMI_DEVICE_ROW_HEIGHT;
+            int thumb_height = max32(20, (ROMI_DEVICE_MAX_VISIBLE_ROWS * scrollbar_height) / device_count);
+            int thumb_y = scrollbar_y + ((device_scroll_offset * scrollbar_height) / device_count);
+
+            romi_draw_fill_rect_z(scrollbar_x, scrollbar_y, ROMI_DIALOG_TEXT_Z, 3, scrollbar_height, ROMI_COLOR_PROGRESS_BACKGROUND);
+            romi_draw_fill_rect_z(scrollbar_x, thumb_y, ROMI_DIALOG_TEXT_Z, 3, thumb_height, ROMI_COLOR_PROGRESS_BAR);
+        }
+
+        // Instructions at bottom
+        if (local_allow_close)
+        {
+            char text[256];
+            const char* ok_button_str = romi_ok_button() == ROMI_BUTTON_X ? ROMI_UTF8_X : ROMI_UTF8_O;
+            const char* cancel_button_str = romi_cancel_button() == ROMI_BUTTON_O ? ROMI_UTF8_O : ROMI_UTF8_X;
+
+            romi_snprintf(text, sizeof(text), "%s %s  %s %s",
+                ok_button_str, _("select"),
+                cancel_button_str, _("cancel"));
+
             romi_draw_text_z((VITA_WIDTH - romi_text_width(text)) / 2, ROMI_DIALOG_VMARGIN + h - 2 * font_height, ROMI_DIALOG_TEXT_Z, ROMI_COLOR_TEXT_DIALOG, text);
         }
     }

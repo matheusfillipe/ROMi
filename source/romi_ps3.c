@@ -1,5 +1,6 @@
 #include "romi.h"
 #include "romi_style.h"
+#include "romi_queue.h"
 
 #include <sys/stat.h>
 #include <sys/thread.h>
@@ -694,6 +695,8 @@ void romi_start(void)
         LOG("mutex create error (%x)", ret);
     }
 
+    romi_queue_init();
+
     sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN, &ret);
     if (ret == 0)
     {
@@ -792,6 +795,8 @@ void romi_swap(void)
 void romi_end(void)
 {
     if (module) end_music();
+
+    romi_queue_shutdown();
 
     curl_global_cleanup();
     romi_stop_debug_log();
@@ -905,6 +910,20 @@ void romi_start_thread(const char* name, romi_thread_entry* start)
 	sys_ppu_thread_t id;
 
 	ret = sysThreadCreate(&id, (void (*)(void *))start, NULL, 1500, 1024*1024, THREAD_JOINABLE, (char*)name);
+	LOG("sysThreadCreate: %s (0x%08x)",name, id);
+
+    if (ret != 0)
+    {
+        LOG("failed to start %s thread", name);
+    }
+}
+
+void romi_start_thread_arg(const char* name, romi_thread_entry_arg* start, void* arg)
+{
+	s32 ret;
+	sys_ppu_thread_t id;
+
+	ret = sysThreadCreate(&id, (void (*)(void *))start, arg, 1500, 1024*1024, THREAD_JOINABLE, (char*)name);
 	LOG("sysThreadCreate: %s (0x%08x)",name, id);
 
     if (ret != 0)

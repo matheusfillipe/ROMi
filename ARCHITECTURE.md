@@ -103,6 +103,96 @@ typedef enum {
 - beautifulsoup4
 - lxml
 
+## Localization System
+
+### Overview
+ROMi uses mini18n for runtime internationalization with support for 9 languages:
+- German (de)
+- Spanish (es)
+- Finnish (fi)
+- French (fr)
+- Indonesian (id)
+- Italian (it)
+- Polish (pl)
+- Portuguese (pt)
+- Turkish (tr)
+
+### Translation Workflow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  pkgfiles/USRDIR/LANG/*.po (Source of Truth)            │
+│  Human-editable translation files in PO format          │
+└───────────────────────┬─────────────────────────────────┘
+                        │ compile (during build)
+                        │ tools/po_to_yts.py
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  build/pkg/USRDIR/LANG/*.yts (Compiled)                 │
+│  Binary translation files loaded by mini18n at runtime  │
+└───────────────────────┬─────────────────────────────────┘
+                        │ packaged into
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│  src.pkg → RPCS3/PS3                                    │
+│  Runtime loads .yts based on system language setting    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### File Formats
+
+**PO Files (.po)** - Source format (editable):
+```
+msgid "Download"
+msgstr "Herunterladen"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+```
+
+**YTS Files (.yts)** - Compiled format (key|value pairs):
+```
+Download|Herunterladen
+Cancel|Abbrechen
+```
+
+### Build Process
+
+**Automatic Translation Compilation** - The Makefile has a `compile-translations` target that:
+- Runs BEFORE every package build (dependency of `pkg` target)
+- Compiles all .po files to .yts automatically
+- Works for ALL build types: `docker-build`, `docker-build-debug`, `rpcs3-build`, `pkg`
+
+```makefile
+compile-translations:
+	@cd $(PKGFILES)/USRDIR/LANG && for po in *.po; do \
+		python3 $(CURDIR)/tools/po_to_yts.py "$$po" "$${po%.po}.yts" || true; \
+	done
+
+pkg: $(BUILD) compile-translations $(OUTPUT).pkg
+```
+
+### Adding New Translations
+
+1. Edit `pkgfiles/USRDIR/LANG/*.po` files (all languages)
+2. Add new msgid/msgstr pairs following existing format
+3. Run `make docker-build` - translations compile automatically
+4. .yts files are generated from .po files on every build - no manual steps
+
+### Translation Macro Usage
+
+In C code, wrap translatable strings with `_()`:
+```c
+romi_dialog_message(_("Download failed"));
+romi_snprintf(text, sizeof(text), "%s %s", _("Press"), _("to continue"));
+```
+
+### Important Notes
+- **.po files** are the single source of truth - edit these only
+- **.yts files** are automatically generated during build - do not edit manually
+- Build system ensures .yts files match .po files
+- Source .yts files in pkgfiles/ may be outdated - build/ versions are always current
+
 ## Data Source
 
 Primary: https://myrient.erista.me/files/

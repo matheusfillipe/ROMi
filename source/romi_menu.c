@@ -1,8 +1,11 @@
 #include <mini18n.h>
+#include <string.h>
 #include "romi_menu.h"
 #include "romi_config.h"
 #include "romi_style.h"
 #include "romi.h"
+#include "romi_queue.h"
+#include "romi_devices.h"
 
 static int menu_search_clear;
 
@@ -16,16 +19,19 @@ static int32_t menu_delta;
 static int32_t romi_menu_width = 0;
 
 static int platform_index = 0;
+static int device_index = 0;
 
 typedef enum {
     MenuSearch,
+    MenuDownloads,
     MenuSearchClear,
     MenuText,
     MenuSort,
     MenuFilter,
     MenuRefresh,
     MenuMusic,
-    MenuPlatform
+    MenuPlatform,
+    MenuStorage
 } MenuType;
 
 typedef struct {
@@ -37,6 +43,7 @@ typedef struct {
 static MenuEntry menu_entries[] =
 {
     { MenuSearch, "Search...", 0 },
+    { MenuDownloads, "Downloads", 0 },
     { MenuSearchClear, ROMI_UTF8_CLEAR " clear", 0 },
 
     { MenuText, "Sort by:", 0 },
@@ -57,6 +64,9 @@ static MenuEntry menu_entries[] =
 
     { MenuText, "Options:", 0 },
     { MenuMusic, "Music", 1 },
+
+    { MenuText, "Storage:", 0 },
+    { MenuStorage, "Device", 0 },
 
     { MenuRefresh, "Refresh...", 0 },
 };
@@ -123,23 +133,40 @@ void romi_menu_start(int search_clear, const Config* config)
     menu_config = *config;
     platform_index = find_platform_index(config->active_platform);
 
+    // Initialize device system and find current device
+    romi_devices_scan();
+    device_index = romi_devices_get_selected_index();
+
     menu_entries[0].text = _("Search...");
-    menu_entries[2].text = _("Sort by:");
-    menu_entries[3].text = _("Name");
-    menu_entries[4].text = _("Region");
-    menu_entries[5].text = _("Platform");
-    menu_entries[6].text = _("Size");
-    menu_entries[7].text = _("Platform:");
-    menu_entries[8].text = _("All");
-    menu_entries[9].text = _("Regions:");
-    menu_entries[10].text = _("Asia");
-    menu_entries[11].text = _("Europe");
-    menu_entries[12].text = _("Japan");
-    menu_entries[13].text = _("USA");
-    menu_entries[14].text = _("World");
-    menu_entries[15].text = _("Options:");
-    menu_entries[16].text = _("Music");
-    menu_entries[17].text = _("Refresh...");
+
+    // Update Downloads text with queue count
+    uint32_t queue_count = romi_queue_get_count();
+    uint32_t active_count = romi_queue_get_active_count();
+    static char downloads_text[64];
+    if (queue_count > 0)
+        romi_snprintf(downloads_text, sizeof(downloads_text), _("Downloads (%u/%u)"), active_count, queue_count);
+    else
+        romi_strncpy(downloads_text, sizeof(downloads_text), _("Downloads"));
+    menu_entries[1].text = downloads_text;
+
+    menu_entries[3].text = _("Sort by:");
+    menu_entries[4].text = _("Name");
+    menu_entries[5].text = _("Region");
+    menu_entries[6].text = _("Platform");
+    menu_entries[7].text = _("Size");
+    menu_entries[8].text = _("Platform:");
+    menu_entries[9].text = _("All");
+    menu_entries[10].text = _("Regions:");
+    menu_entries[11].text = _("Asia");
+    menu_entries[12].text = _("Europe");
+    menu_entries[13].text = _("Japan");
+    menu_entries[14].text = _("USA");
+    menu_entries[15].text = _("World");
+    menu_entries[16].text = _("Options:");
+    menu_entries[17].text = _("Music");
+    menu_entries[18].text = _("Storage:");
+    menu_entries[19].text = _("Device");
+    menu_entries[20].text = _("Refresh...");
 
     if (romi_menu_width)
         return;
@@ -185,7 +212,8 @@ int romi_do_menu(romi_input* input)
                 menu_selected--;
             }
         } while (menu_entries[menu_selected].type == MenuText
-            || (menu_entries[menu_selected].type == MenuSearchClear && !menu_search_clear));
+            || (menu_entries[menu_selected].type == MenuSearchClear && !menu_search_clear)
+            || (menu_entries[menu_selected].type == MenuDownloads && romi_queue_get_count() == 0));
     }
 
     if (input->active & ROMI_BUTTON_DOWN)
@@ -200,7 +228,8 @@ int romi_do_menu(romi_input* input)
                 menu_selected++;
             }
         } while (menu_entries[menu_selected].type == MenuText
-            || (menu_entries[menu_selected].type == MenuSearchClear && !menu_search_clear));
+            || (menu_entries[menu_selected].type == MenuSearchClear && !menu_search_clear)
+            || (menu_entries[menu_selected].type == MenuDownloads && romi_queue_get_count() == 0));
     }
 
     if (input->pressed & romi_cancel_button())
@@ -224,12 +253,32 @@ int romi_do_menu(romi_input* input)
             menu_delta = -1;
             return 1;
         }
-        if (type == MenuSearchClear)
+        else if (type == MenuDownloads)
+        {
+            menu_result = MenuResultDownloads;
+            menu_delta = -1;
+            return 1;
+        }
+        else if (type == MenuSearchClear)
         {
             menu_selected--;
             menu_result = MenuResultSearchClear;
             menu_delta = -1;
             return 1;
+        }
+        else if (type == MenuStorage)
+        {
+            device_index++;
+            if (device_index >= romi_devices_count())
+                device_index = 0;
+
+            const RomiDevice* device = romi_devices_get(device_index);
+            if (device)
+            {
+                romi_devices_set_selected(device_index);
+                // Update config with new device path
+                romi_strncpy(menu_config.storage_device_path, sizeof(menu_config.storage_device_path), device->path);
+            }
         }
         else if (type == MenuRefresh)
         {
@@ -281,23 +330,37 @@ int romi_do_menu(romi_input* input)
         MenuType type = entry->type;
         if (type == MenuText)
         {
-            y += font_height;
+            y += font_height / 2;  // Reduced spacing for section headers
         }
         else if (type == MenuSearchClear && !menu_search_clear)
         {
             continue;
         }
+        else if (type == MenuDownloads && romi_queue_get_count() == 0)
+        {
+            continue;
+        }
         else if (type == MenuRefresh)
         {
-            y += font_height;
+            y += font_height / 2;  // Reduced spacing before Refresh
         }
 
         int x = VITA_WIDTH - (romi_menu_width + ROMI_MAIN_HMARGIN) + ROMI_MENU_LEFT_PADDING;
 
         char text[64];
-        if (type == MenuSearch || type == MenuSearchClear || type == MenuText || type == MenuRefresh)
+        if (type == MenuSearch || type == MenuSearchClear || type == MenuDownloads || type == MenuText || type == MenuRefresh)
         {
-            romi_strncpy(text, sizeof(text), entry->text);
+            if (type == MenuDownloads)
+            {
+                // Show Downloads with queue count
+                uint32_t count = romi_queue_get_count();
+                uint32_t active = romi_queue_get_active_count();
+                romi_snprintf(text, sizeof(text), "%s (%u/%u)", _("Downloads"), active, count);
+            }
+            else
+            {
+                romi_strncpy(text, sizeof(text), _(entry->text));
+            }
         }
         else if (type == MenuSort)
         {
@@ -305,28 +368,51 @@ int romi_do_menu(romi_input* input)
             {
                 romi_snprintf(text, sizeof(text), "%s %s",
                     menu_config.order == SortAscending ? ROMI_UTF8_SORT_ASC : ROMI_UTF8_SORT_DESC,
-                    entry->text);
+                    _(entry->text));
             }
             else
             {
                 x += romi_text_width(ROMI_UTF8_SORT_ASC " ");
-                romi_strncpy(text, sizeof(text), entry->text);
+                romi_strncpy(text, sizeof(text), _(entry->text));
             }
         }
         else if (type == MenuFilter)
         {
             romi_snprintf(text, sizeof(text), "%s %s",
                 menu_config.filter & entry->value ? ROMI_UTF8_CHECK_ON : ROMI_UTF8_CHECK_OFF,
-                entry->text);
+                _(entry->text));
         }
         else if (type == MenuMusic)
         {
             romi_snprintf(text, sizeof(text), "%s %s",
-                menu_config.music == (int)entry->value ? ROMI_UTF8_CHECK_ON : ROMI_UTF8_CHECK_OFF, entry->text);
+                menu_config.music == (int)entry->value ? ROMI_UTF8_CHECK_ON : ROMI_UTF8_CHECK_OFF, _(entry->text));
         }
         else if (type == MenuPlatform)
         {
             romi_snprintf(text, sizeof(text), ROMI_UTF8_CLEAR " %s", platform_entries[platform_index].name);
+        }
+        else if (type == MenuStorage)
+        {
+            const RomiDevice* device = romi_devices_get(device_index);
+            if (device)
+            {
+                // Extract device name from path (e.g., "dev_hdd0" from "/dev_hdd0/")
+                const char* device_name = device->path;
+                if (device_name[0] == '/')
+                    device_name++; // Skip leading slash
+                // Remove trailing slash if present
+                char device_label[64];
+                romi_strncpy(device_label, sizeof(device_label), device_name);
+                int len = strlen(device_label);
+                if (len > 0 && device_label[len - 1] == '/')
+                    device_label[len - 1] = '\0';
+
+                romi_snprintf(text, sizeof(text), ROMI_UTF8_CLEAR " %s", device_label);
+            }
+            else
+            {
+                romi_snprintf(text, sizeof(text), ROMI_UTF8_CLEAR " %s", "dev_hdd0");
+            }
         }
 
         romi_draw_text_z(x, y, ROMI_MENU_TEXT_Z, (menu_selected == i) ? ROMI_COLOR_TEXT_MENU_SELECTED : ROMI_COLOR_TEXT_MENU, text);
