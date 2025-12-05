@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Pull PS3 Builder image
+        run: docker pull mattfly/ps3-builder:latest
+
+      - name: Build PS3 package
+        run: make docker-build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: romi-ps3-build-${{ github.sha }}
+          path: |
+            src.pkg
+            src.gnpdrm.pkg
+            src.self
+          retention-days: 30
