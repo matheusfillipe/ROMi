@@ -43,11 +43,11 @@ PLATFORM_FILENAME_MAP = {
 }
 
 REGION_PATTERNS = {
-    "USA": re.compile(r"[\(\[]USA[\)\]]|[\(\[]US[\)\]]|[\(\[]U[\)\]]", re.IGNORECASE),
-    "EUR": re.compile(r"[\(\[]Europe[\)\]]|[\(\[]EUR[\)\]]|[\(\[]E[\)\]]", re.IGNORECASE),
-    "JPN": re.compile(r"[\(\[]Japan[\)\]]|[\(\[]JPN[\)\]]|[\(\[]J[\)\]]", re.IGNORECASE),
-    "World": re.compile(r"[\(\[]World[\)\]]", re.IGNORECASE),
-    "ASA": re.compile(r"[\(\[]Asia[\)\]]", re.IGNORECASE),
+    "USA": re.compile(r"\b(?:USA|US)\b", re.IGNORECASE),
+    "EUR": re.compile(r"\b(?:Europe|EUR)\b", re.IGNORECASE),
+    "JPN": re.compile(r"\b(?:Japan|JPN)\b", re.IGNORECASE),
+    "World": re.compile(r"\bWorld\b", re.IGNORECASE),
+    "ASA": re.compile(r"\b(?:Asia|ASA)\b", re.IGNORECASE),
 }
 
 DEFAULT_REGION_PRIORITY = ["World", "USA", "EUR", "JPN", "ASA", "Unknown"]
@@ -77,10 +77,21 @@ class RomEntry:
 
 
 def detect_region(filename: str) -> str:
+    """Detect region from filename, returning highest priority region if multiple found."""
+    found_regions = []
     for region, pattern in REGION_PATTERNS.items():
         if pattern.search(filename):
-            return region
-    return "Unknown"
+            found_regions.append(region)
+
+    if not found_regions:
+        return "Unknown"
+
+    # Return highest priority region
+    for priority_region in DEFAULT_REGION_PRIORITY:
+        if priority_region in found_regions:
+            return priority_region
+
+    return found_regions[0]
 
 
 def parse_size(size_str: str) -> int:
@@ -198,7 +209,7 @@ async def fetch_page(session: aiohttp.ClientSession, url: str) -> Optional[str]:
     return None
 
 
-def parse_platform_listing(html: str, platform: str, base_url: str, limit: int = 0) -> list[RomEntry]:
+def parse_platform_listing(html: str, platform: str, base_url: str, limit: int = 0, name_filter: str = "") -> list[RomEntry]:
     soup = BeautifulSoup(html, "lxml")
     entries = []
 
@@ -225,9 +236,14 @@ def parse_platform_listing(html: str, platform: str, base_url: str, limit: int =
         if not name.lower().endswith(".zip"):
             continue
 
+        clean = clean_name(name)
+
+        # Apply name filter if specified
+        if name_filter and name_filter.lower() not in clean.lower():
+            continue
+
         full_url = urljoin(base_url, href)
         region = detect_region(name)
-        clean = clean_name(name)
         size = parse_size(size_text)
 
         entries.append(RomEntry(
@@ -250,6 +266,7 @@ async def fetch_platform(
     platform: str,
     url: str,
     limit: int = 0,
+    name_filter: str = "",
 ) -> list[RomEntry]:
     print(f"[{platform}] Fetching {url}", file=sys.stderr)
 
@@ -260,7 +277,7 @@ async def fetch_platform(
         print(f"[{platform}] Failed to fetch", file=sys.stderr)
         return []
 
-    entries = parse_platform_listing(html, platform, url, limit)
+    entries = parse_platform_listing(html, platform, url, limit, name_filter)
     print(f"[{platform}] Found {len(entries)} entries", file=sys.stderr)
     return entries
 
@@ -268,6 +285,7 @@ async def fetch_platform(
 async def fetch_all_platforms(
     platforms_to_fetch: dict[str, str],
     limit_per_platform: int = 0,
+    name_filter: str = "",
 ) -> list[RomEntry]:
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -277,7 +295,7 @@ async def fetch_all_platforms(
 
     async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
         tasks = [
-            fetch_platform(session, semaphore, platform, url, limit_per_platform)
+            fetch_platform(session, semaphore, platform, url, limit_per_platform, name_filter)
             for platform, url in platforms_to_fetch.items()
         ]
         results = await asyncio.gather(*tasks)
@@ -395,6 +413,12 @@ Examples:
         action="store_true",
         help="Store only filename in URL field",
     )
+    parser.add_argument(
+        "--name-filter",
+        type=str,
+        default="",
+        help="Filter ROMs by name (case-insensitive substring match). Example: 'Grand Theft Auto'",
+    )
     return parser.parse_args()
 
 
@@ -418,6 +442,8 @@ async def main() -> None:
     print(f"Fetching {len(platforms_to_fetch)} platforms: {', '.join(sorted(platforms_to_fetch.keys()))}")
     if args.per_platform > 0:
         print(f"  Limit: {args.per_platform} per platform")
+    if args.name_filter:
+        print(f"  Name filter: '{args.name_filter}'")
     if args.deduplicate:
         print(f"  Deduplication: ON (priority: {' > '.join(region_priority)})")
     if args.exclude_variants:
@@ -427,7 +453,7 @@ async def main() -> None:
     print()
 
     total_start = time.time()
-    entries = await fetch_all_platforms(platforms_to_fetch, args.per_platform)
+    entries = await fetch_all_platforms(platforms_to_fetch, args.per_platform, args.name_filter)
     fetch_elapsed = time.time() - total_start
 
     print(f"\n=== Summary ===")

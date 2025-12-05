@@ -1,10 +1,11 @@
 - [x] i18n
-- [ ] Check checksums from inside zips
+- [-] Check checksums from inside zips (mosst dont have one....)
 - [ ] issue where games will just restart ps3 instantly
 - [ ] missing games in databank? too small?
 - [ ] slow download speeds
 - [x] change background image
 - [x] change song
 - [x] Mark multiple items for download simultaneously
-- [ ] download to another drive like ntfs or exfat
+- [-] download to another drive like ntfs or exfat
+
 - [ ] ps3 background download like pkgi reboot to download thing queue (not sure if possible to unzip and son. we might need to mark them as something to remember to open romi later to finish installation (?)
