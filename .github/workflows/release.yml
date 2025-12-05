@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Pull PS3 Builder image
+        run: docker pull mattfly/ps3-builder:latest
+
+      - name: Build release package
+        run: make docker-build
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "ROMi PS3 v${{ steps.version.outputs.VERSION }}"
+          generate_release_notes: true
+          files: |
+            src.pkg
+            src.gnpdrm.pkg
+            src.self
