@@ -1375,6 +1375,59 @@ __attribute__((unused)) static int romi_tcp_tune_callback(void *clientp, curl_so
     return CURL_SOCKOPT_OK;
 }
 
+#ifdef DEBUGLOG
+// Curl debug callback to capture verbose output for troubleshooting
+static int curl_debug_callback(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
+{
+    const char *prefix;
+    switch (type) {
+        case CURLINFO_TEXT:
+            prefix = "CURL_INFO";
+            break;
+        case CURLINFO_HEADER_IN:
+            prefix = "CURL_HEADER_IN";
+            break;
+        case CURLINFO_HEADER_OUT:
+            prefix = "CURL_HEADER_OUT";
+            break;
+        case CURLINFO_DATA_IN:
+            return 0; // Skip data dumps
+        case CURLINFO_DATA_OUT:
+            return 0; // Skip data dumps
+        case CURLINFO_SSL_DATA_IN:
+        case CURLINFO_SSL_DATA_OUT:
+            return 0; // Skip SSL data dumps
+        default:
+            return 0;
+    }
+
+    // Log the message (trim trailing newline)
+    char buffer[512];
+    size_t len = size < sizeof(buffer) - 1 ? size : sizeof(buffer) - 1;
+    memcpy(buffer, data, len);
+    buffer[len] = '\0';
+
+    // Remove trailing newlines
+    while (len > 0 && (buffer[len-1] == '\n' || buffer[len-1] == '\r')) {
+        buffer[--len] = '\0';
+    }
+
+    if (len > 0) {
+        // Write to both LOG and file for debugging
+        LOG("%s: %s", prefix, buffer);
+
+        // Also write to file in case LOG doesn't show up
+        FILE *f = fopen("/dev_hdd0/tmp/romi/curl_debug.log", "a");
+        if (f) {
+            fprintf(f, "%s: %s\n", prefix, buffer);
+            fclose(f);
+        }
+    }
+
+    return 0;
+}
+#endif
+
 void romi_curl_init(CURL *curl)
 {
     static struct curl_slist *headers = NULL;
@@ -1395,8 +1448,8 @@ void romi_curl_init(CURL *curl)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     // don't verify the peer's SSL certificate
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-    // Set SSL VERSION to TLS 1.2
-    curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+    // Let curl/mbedTLS auto-negotiate TLS version (default behavior)
+    curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_DEFAULT);
     // Set timeout for the connection to build
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 20L);
     // Follow redirects
@@ -1417,6 +1470,8 @@ void romi_curl_init(CURL *curl)
 #ifdef DEBUGLOG
     // Enable verbose CURL logging in debug builds to diagnose issues
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curl_debug_callback);
+    LOG("CURL: Debug callback enabled for detailed connection diagnostics");
 #endif
 }
 
@@ -1518,7 +1573,11 @@ int romi_http_response_length(romi_http* http, int64_t* length)
 
     if(res != CURLE_OK)
     {
-        LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        char *url = NULL;
+        curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &url);
+        LOG("curl_easy_perform() failed: %s (code %d)", curl_easy_strerror(res), res);
+        LOG("  URL attempted: %s", url ? url : "unknown");
+        LOG("  Error details: Check CURL_INFO messages above for connection diagnostics");
         return 0;
     }
 
@@ -1556,7 +1615,11 @@ int romi_http_read(romi_http* http, void* write_func, void* write_data, void* xf
 
     if(res != CURLE_OK)
     {
-        LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        char *url = NULL;
+        curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &url);
+        LOG("curl_easy_perform() failed: %s (code %d)", curl_easy_strerror(res), res);
+        LOG("  URL attempted: %s", url ? url : "unknown");
+        LOG("  Error details: Check CURL_INFO messages above for connection diagnostics");
         return 0;
     }
 

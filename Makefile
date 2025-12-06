@@ -160,8 +160,11 @@ PKGFILES	:=	pkgfiles
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS		:=	-lcurl -lxml2 -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lio -lsysutil -lrt -llv2 -lpngdec -lsysmodule -lm -lsysfs  -ljpgdec \
-				-lnet -lfreetype -lz -lmikmod -laudio -lpolarssl -lmini18n -ljson-c
+LOCAL_LIBCURL := /opt/libcurl/lib/libcurl.a
+LOCAL_LIBCURL_INC := /opt/libcurl/include
+LOCAL_MBEDTLS := /opt/mbedtls/lib/libmbedtls.a /opt/mbedtls/lib/libmbedx509.a /opt/mbedtls/lib/libmbedcrypto.a
+LIBS		:=	$(LOCAL_LIBCURL) $(LOCAL_MBEDTLS) -lxml2 -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lio -lsysutil -lrt -llv2 -lpngdec -lsysmodule -lm -lsysfs  -ljpgdec \
+				-lnet -lfreetype -lz -lmikmod -laudio -lmini18n -ljson-c
 
 
 #---------------------------------------------------------------------------------
@@ -238,7 +241,8 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES), -I$(CURDIR)/$(dir)) \
 					$(LIBPSL1GHT_INC) \
 					-I$(PORTLIBS)/include/freetype2 \
 					-I$(PORTLIBS)/include/libxml2 \
-					-I$(CURDIR)/$(BUILD) -I$(PORTLIBS)/include
+					-I$(CURDIR)/$(BUILD) -I$(PORTLIBS)/include \
+					-I$(LOCAL_LIBCURL_INC)
 
 #---------------------------------------------------------------------------------
 # build a list of library paths
