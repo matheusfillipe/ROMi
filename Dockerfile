@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV PS3DEV=/ps3dev
 ENV PSL1GHT=/ps3dev
@@ -10,7 +10,10 @@ RUN apt-get update && apt-get install -y \
     git \
     python2.7 \
     python3 \
+    python3-dev \
     libelf1 \
+    libelf-dev \
+    elfutils \
     gettext \
     autoconf \
     automake \
@@ -19,6 +22,18 @@ RUN apt-get update && apt-get install -y \
     wget \
     cmake \
     ninja-build \
+    libgmp-dev \
+    libssl-dev \
+    zlib1g-dev \
+    bison \
+    flex \
+    gcc \
+    g++ \
+    texinfo \
+    libncurses5-dev \
+    patch \
+    bzip2 \
+    subversion \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sL http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb -o /tmp/libssl.deb && \
@@ -89,9 +104,10 @@ RUN cd /tmp && wget https://github.com/nghttp2/nghttp2/releases/download/v1.57.0
     make -j$(nproc) && make install && \
     rm -rf /tmp/nghttp2-1.57.0
 
-# Build libcurl 7.79.1 for PS3 with mbedTLS 3.6.0 (TLS 1.3) + nghttp2 (HTTP/2)
-RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
-    tar xzf curl-7.79.1.tar.gz && cd curl-7.79.1 && \
+# Build libcurl 7.88.1 for PS3 with mbedTLS 3.6.0 (TLS 1.3) + nghttp2 (HTTP/2)
+RUN cd /tmp && wget https://curl.se/download/curl-7.88.1.tar.gz && \
+    tar xzf curl-7.88.1.tar.gz && cd curl-7.88.1 && \
+    PKG_CONFIG_PATH="/opt/nghttp2/lib/pkgconfig" \
     LDFLAGS="-L/ps3dev/ppu/lib -L/opt/mbedtls/lib -L/opt/nghttp2/lib" \
     CPPFLAGS="-I/ps3dev/ppu/include -I/opt/mbedtls/include -I/opt/nghttp2/include" \
     LIBS="-lnet -lsysutil -lsysmodule -lmbedtls -lmbedx509 -lmbedcrypto -lnghttp2" \
@@ -103,8 +119,11 @@ RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
         --enable-static \
         --with-mbedtls=/opt/mbedtls \
         --with-nghttp2=/opt/nghttp2 \
+        --enable-http2 \
         --disable-ipv6 \
         --disable-threaded-resolver \
+        --disable-ntlm \
+        --disable-ntlm-wb \
         --without-zlib \
         --without-brotli \
         --without-zstd \
@@ -124,6 +143,6 @@ RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
         --enable-hidden-symbols \
         --with-ca-bundle=none && \
     make -j$(nproc) && make install && \
-    rm -rf /tmp/curl-7.79.1
+    rm -rf /tmp/curl-7.88.1
 
 WORKDIR /src
