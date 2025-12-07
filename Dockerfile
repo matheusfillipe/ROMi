@@ -68,18 +68,33 @@ RUN cd /tmp && git clone --depth 1 --branch v3.6.0 https://github.com/ARMmbed/mb
     make -j$(nproc) && make install && \
     rm -rf /tmp/mbedtls
 
-# Create compatibility symlinks for PS3 socket headers (net/socket.h -> sys/socket.h)
-RUN mkdir -p /ps3dev/ppu/include/sys && \
-    ln -sf ../net/socket.h /ps3dev/ppu/include/sys/socket.h && \
-    ln -sf ../netinet/in.h /ps3dev/ppu/include/sys/netinet_in.h
+# Install PSL1GHT libraries for PS3 networking (libnet, libsysutil, libsysmodule)
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/ps3dev/PSL1GHT.git && \
+    cd PSL1GHT && \
+    make install-ctrl && make && make install && \
+    rm -rf /tmp/PSL1GHT
 
-# Copy CMake toolchain file for PS3 cross-compilation
-RUN mkdir -p /tmp/cmake
-COPY docker/ps3-toolchain.cmake /tmp/cmake/
+# Build nghttp2 for HTTP/2 support
+RUN cd /tmp && wget https://github.com/nghttp2/nghttp2/releases/download/v1.57.0/nghttp2-1.57.0.tar.gz && \
+    tar xzf nghttp2-1.57.0.tar.gz && cd nghttp2-1.57.0 && \
+    ./configure \
+        --host=powerpc64-ps3-elf \
+        --prefix=/opt/nghttp2 \
+        --disable-shared \
+        --enable-static \
+        --disable-examples \
+        --disable-app \
+        --enable-lib-only && \
+    make -j$(nproc) && make install && \
+    rm -rf /tmp/nghttp2-1.57.0
 
-# Build libcurl 7.79.1 for PS3 with mbedTLS 3.6.0 (older, more stable)
+# Build libcurl 7.79.1 for PS3 with mbedTLS 3.6.0 (TLS 1.3) + nghttp2 (HTTP/2)
 RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
     tar xzf curl-7.79.1.tar.gz && cd curl-7.79.1 && \
+    LDFLAGS="-L/ps3dev/ppu/lib -L/opt/mbedtls/lib -L/opt/nghttp2/lib" \
+    CPPFLAGS="-I/ps3dev/ppu/include -I/opt/mbedtls/include -I/opt/nghttp2/include" \
+    LIBS="-lnet -lsysutil -lsysmodule -lmbedtls -lmbedx509 -lmbedcrypto -lnghttp2" \
     ./configure \
         --host=powerpc64-ps3-elf \
         --build=x86_64-linux-gnu \
@@ -87,6 +102,9 @@ RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
         --disable-shared \
         --enable-static \
         --with-mbedtls=/opt/mbedtls \
+        --with-nghttp2=/opt/nghttp2 \
+        --disable-ipv6 \
+        --disable-threaded-resolver \
         --without-zlib \
         --without-brotli \
         --without-zstd \
@@ -102,11 +120,8 @@ RUN cd /tmp && wget https://curl.se/download/curl-7.79.1.tar.gz && \
         --disable-smb \
         --disable-smtp \
         --disable-gopher \
-        --disable-ftp \
-        --disable-file \
         --disable-manual \
-        --disable-threaded-resolver \
-        --disable-curldebug \
+        --enable-hidden-symbols \
         --with-ca-bundle=none && \
     make -j$(nproc) && make install && \
     rm -rf /tmp/curl-7.79.1
