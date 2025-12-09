@@ -1,0 +1,32 @@
+--- a/lib/vtls/mbedtls.c
++++ b/lib/vtls/mbedtls.c
+@@ -189,8 +189,14 @@ static int bio_cf_write(void *bio,
+ {
+   struct Curl_cfilter *cf = bio;
+   struct Curl_easy *data = CF_DATA_CURRENT(cf);
+-  ssize_t nwritten = Curl_conn_cf_send(cf->next, data, buf, blen, &result);
++  ssize_t nwritten;
++
++  infof(data, "mbedTLS bio_cf_write: attempting to write %zu bytes", blen);
++  nwritten = Curl_conn_cf_send(cf->next, data, buf, blen, &result);
++  infof(data, "mbedTLS bio_cf_write: wrote %zd bytes, result=%d, errno=%d",
++        nwritten, result, errno);
++
+   CURL_TRC_CF(data, cf, "bio_cf_out_write(len=%zu) -> %zd, err=%d",
+               blen, nwritten, result);
+   if(nwritten < 0) {
+@@ -210,8 +216,14 @@ static int bio_cf_read(void *bio,
+ {
+   struct Curl_cfilter *cf = bio;
+   struct Curl_easy *data = CF_DATA_CURRENT(cf);
+-  ssize_t nread = Curl_conn_cf_recv(cf->next, data, buf, blen, &result);
++  ssize_t nread;
++
++  infof(data, "mbedTLS bio_cf_read: attempting to read %zu bytes", blen);
++  nread = Curl_conn_cf_recv(cf->next, data, buf, blen, &result);
++  infof(data, "mbedTLS bio_cf_read: read %zd bytes, result=%d, errno=%d",
++        nread, result, errno);
++
+   CURL_TRC_CF(data, cf, "bio_cf_in_read(len=%zu) -> %zd, err=%d",
+               blen, nread, result);
+   if(nread < 0) {

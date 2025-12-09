@@ -164,7 +164,7 @@ LOCAL_LIBCURL := /opt/libcurl/lib/libcurl.a
 LOCAL_LIBCURL_INC := /opt/libcurl/include
 LOCAL_MBEDTLS := /opt/mbedtls/lib/libmbedtls.a /opt/mbedtls/lib/libmbedx509.a /opt/mbedtls/lib/libmbedcrypto.a
 LIBS		:=	$(LOCAL_LIBCURL) $(LOCAL_MBEDTLS) -lxml2 -lya2d -lfont3d -ltiny3d -lsimdmath -lgcm_sys -lio -lsysutil -lrt -llv2 -lpngdec -lsysmodule -lm -lsysfs  -ljpgdec \
-				-lnet -lfreetype -lz -lmikmod -laudio -lmini18n -ljson-c
+				-lnet -lnetctl -lfreetype -lz -lmikmod -laudio -lmini18n -ljson-c
 
 
 #---------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ LIBS		:=	$(LOCAL_LIBCURL) $(LOCAL_MBEDTLS) -lxml2 -lya2d -lfont3d -ltiny3d -lsim
 CFLAGS		=	-O2 -Wall -mcpu=cell -std=gnu99 $(MACHDEP) $(INCLUDE)
 CXXFLAGS	=	$(CFLAGS)
 
-LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS		=	$(MACHDEP) -Wl,-Map,$(notdir $@).map -Wl,--wrap=read -Wl,--wrap=write -Wl,--wrap=close
 
 ifdef DEBUGLOG
 CFLAGS		+=	-DROMI_ENABLE_LOGGING

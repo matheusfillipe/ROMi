@@ -1,0 +1,34 @@
+--- a/library/entropy_poll.c
++++ b/library/entropy_poll.c
+@@ -25,6 +25,29 @@
+ 
+ #if defined(MBEDTLS_ENTROPY_C)
+ 
++#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
++/* PS3 custom hardware entropy using rand/srand */
++#include <stdlib.h>
++#include <time.h>
++
++int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen)
++{
++    static unsigned int seed_initialized = 0;
++    size_t i;
++
++    (void)data;
++
++    if (!seed_initialized) {
++        srand((unsigned int)time(NULL));
++        seed_initialized = 1;
++    }
++
++    for (i = 0; i < len; i++) {
++        output[i] = (unsigned char)(rand() & 0xFF);
++    }
++
++    *olen = len;
++    return 0;
++}
++#endif /* MBEDTLS_ENTROPY_HARDWARE_ALT */
++
+ #include "mbedtls/entropy_poll.h"
+ #include "mbedtls/error.h"

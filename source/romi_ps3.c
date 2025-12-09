@@ -13,6 +13,9 @@
 #include <lv2/sysfs.h>
 #include <lv2/process.h>
 #include <net/net.h>
+#include <net/netctl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 #include <unistd.h>
 #include <string.h>
@@ -67,7 +70,7 @@ void romi_dual_log(const char* format, ...) {
 
 #define ROMI_USER_AGENT "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
 
-#define ROMI_CURL_BUFFER_SIZE   (512 * 1024L)    // 512 KB - optimized for throughput
+#define ROMI_CURL_BUFFER_SIZE   (64 * 1024L)    // 64 KB - safe limit for CURLOPT_BUFFERSIZE
 #define ROMI_FILE_BUFFER_SIZE   (256 * 1024)
 
 
@@ -677,11 +680,91 @@ void romi_start(void)
 {
     romi_start_debug_log();
     
-    netInitialize();
-
-    LOG("initializing Network");
+    // Initialize PSL1GHT networking (required for modern curl)
+    LOG("initializing PSL1GHT Network");
     sysModuleLoad(SYSMODULE_NET);
-    curl_global_init(CURL_GLOBAL_ALL);
+    sysModuleLoad(SYSMODULE_SYSUTIL);
+    
+    s32 net_ret = netInitialize();
+    LOG("netInitialize returned: 0x%08x", net_ret);
+    
+    s32 ctl_ret = netCtlInit();
+    LOG("netCtlInit returned: 0x%08x", ctl_ret);
+    
+    // Check network state
+    s32 state = -1;
+    s32 state_ret = netCtlGetState(&state);
+    LOG("netCtlGetState returned: 0x%08x, state=%d", state_ret, state);
+    if (state == NET_CTL_STATE_IPObtained) {
+        LOG("Network state: IP obtained - ready for connections");
+    } else {
+        LOG("Network state: NOT ready (state=%d, expected %d)", state, NET_CTL_STATE_IPObtained);
+    }
+    
+    // Get IP address for debugging
+    union net_ctl_info info;
+    if (netCtlGetInfo(NET_CTL_INFO_IP_ADDRESS, &info) == 0) {
+        LOG("Local IP address: %s", info.ip_address);
+    }
+    if (netCtlGetInfo(NET_CTL_INFO_PRIMARY_DNS, &info) == 0) {
+        LOG("Primary DNS: %s", info.primary_dns);
+    }
+
+    // Initialize DNS resolver (required for gethostbyname)
+    extern int __netInitializeNetworkEx(void*, int);
+    s32 resolver_ret = __netInitializeNetworkEx(NULL, 0);
+    LOG("DNS resolver init returned: 0x%08x", resolver_ret);
+
+    CURLcode init_ret = curl_global_init(CURL_GLOBAL_ALL);
+    LOG("curl_global_init returned: %d (%s)", init_ret, curl_easy_strerror(init_ret));
+
+    // Diagnostic: Check what curl was actually built with
+    curl_version_info_data *ver = curl_version_info(CURLVERSION_NOW);
+    LOG("=== CURL BUILD INFO ===");
+    LOG("curl version: %s", ver->version);
+    LOG("SSL version: %s", ver->ssl_version ? ver->ssl_version : "NONE");
+    LOG("Features: 0x%x", ver->features);
+    LOG("SSL support: %s", (ver->features & CURL_VERSION_SSL) ? "YES" : "NO");
+    LOG("HTTP2 support: %s", (ver->features & CURL_VERSION_HTTP2) ? "YES" : "NO");
+    LOG("AsynchDNS: %s", (ver->features & CURL_VERSION_ASYNCHDNS) ? "YES" : "NO");
+    LOG("======================");
+
+    // Diagnostic: Test absolute minimal curl usage
+    LOG("=== TESTING MINIMAL CURL ===");
+    CURL *test_curl = curl_easy_init();
+    LOG("curl_easy_init returned: %p", (void*)test_curl);
+    if (test_curl) {
+        CURLcode res;
+        
+        res = curl_easy_setopt(test_curl, CURLOPT_URL, "http://93.184.215.14/");  // example.com IP directly
+        LOG("CURLOPT_URL result: %d", res);
+        
+        res = curl_easy_setopt(test_curl, CURLOPT_NOBODY, 1L);
+        LOG("CURLOPT_NOBODY result: %d", res);
+        
+        res = curl_easy_setopt(test_curl, CURLOPT_TIMEOUT, 10L);
+        LOG("CURLOPT_TIMEOUT result: %d", res);
+        
+        res = curl_easy_setopt(test_curl, CURLOPT_CONNECTTIMEOUT, 10L);
+        LOG("CURLOPT_CONNECTTIMEOUT result: %d", res);
+
+        LOG("About to call curl_easy_perform...");
+        CURLcode test_res = curl_easy_perform(test_curl);
+        LOG("curl_easy_perform returned: %d (%s)", test_res, curl_easy_strerror(test_res));
+        
+        if (test_res != CURLE_OK) {
+            long response_code = 0;
+            curl_easy_getinfo(test_curl, CURLINFO_RESPONSE_CODE, &response_code);
+            LOG("HTTP response code: %ld", response_code);
+            
+            char *effective_url = NULL;
+            curl_easy_getinfo(test_curl, CURLINFO_EFFECTIVE_URL, &effective_url);
+            LOG("Effective URL: %s", effective_url ? effective_url : "(null)");
+        }
+        
+        curl_easy_cleanup(test_curl);
+    }
+    LOG("============================");
 
     sys_mutex_attr_t mutex_attr;
     mutex_attr.attr_protocol = SYS_MUTEX_PROTOCOL_FIFO;
@@ -1375,9 +1458,9 @@ __attribute__((unused)) static int romi_tcp_tune_callback(void *clientp, curl_so
     return CURL_SOCKOPT_OK;
 }
 
-#ifdef DEBUGLOG
+#ifdef ROMI_ENABLE_LOGGING
 // Curl debug callback to capture verbose output for troubleshooting
-static int curl_debug_callback(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
+static int romi_curl_debug_cb(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr)
 {
     const char *prefix;
     switch (type) {
@@ -1458,20 +1541,25 @@ void romi_curl_init(CURL *curl)
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 20L);
     // Fail the request if the HTTP code returned is equal to or larger than 400
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
-    // request using SSL for the FTP transfer if available
-    curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_TRY);
 
-    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, ROMI_CURL_BUFFER_SIZE);
-    curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
-    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
-    curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, 60L);
-    curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, 30L);
+    // TESTING: Disable SSL entirely to isolate TLS-related issues
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    // curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_TRY);
 
-#ifdef DEBUGLOG
-    // Enable verbose CURL logging in debug builds to diagnose issues
+    // MINIMAL CONFIG - Testing which option causes error
+    // curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, ROMI_CURL_BUFFER_SIZE);
+    // curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
+    // curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+    // curl_easy_setopt(curl, CURLOPT_TCP_KEEPIDLE, 60L);
+    // curl_easy_setopt(curl, CURLOPT_TCP_KEEPINTVL, 30L);
+    LOG("CURL: Minimal config (all TCP options disabled)");
+
+#ifdef ROMI_ENABLE_LOGGING
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curl_debug_callback);
-    LOG("CURL: Debug callback enabled for detailed connection diagnostics");
+    curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, romi_curl_debug_cb);
+    curl_easy_setopt(curl, CURLOPT_DEBUGDATA, NULL);
+    LOG("CURL: Debug callback ENABLED - will show mbedTLS errors");
 #endif
 }
 
@@ -1494,13 +1582,14 @@ static CURL* romi_curl_init_throughput(int enable_throughput_mode)
         curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
         LOG("CURL: Throughput mode ENABLED (Nagle's algorithm ON, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
 
+        // TEMPORARILY DISABLED: Testing if callback causes CURLE_BAD_FUNCTION_ARGUMENT
         // Add socket tuning callback (requires CURLOPT_SOCKOPTFUNCTION support)
-        #ifdef CURLOPT_SOCKOPTFUNCTION
-        curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, romi_tcp_tune_callback);
-        LOG("CURL: Socket tuning callback registered");
-        #else
-        LOG("CURL: Warning - CURLOPT_SOCKOPTFUNCTION not available, socket tuning disabled");
-        #endif
+        // #ifdef CURLOPT_SOCKOPTFUNCTION
+        // curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, romi_tcp_tune_callback);
+        // LOG("CURL: Socket tuning callback registered");
+        // #else
+        LOG("CURL: Socket tuning callback DISABLED for testing");
+        // #endif
     }
     else
     {
@@ -1574,10 +1663,32 @@ int romi_http_response_length(romi_http* http, int64_t* length)
     if(res != CURLE_OK)
     {
         char *url = NULL;
+        char *primary_ip = NULL;
+        long os_errno = 0;
+        
         curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &url);
+        curl_easy_getinfo(http->curl, CURLINFO_PRIMARY_IP, &primary_ip);
+        curl_easy_getinfo(http->curl, CURLINFO_OS_ERRNO, &os_errno);
+        
+        LOG("=== CURL ERROR DIAGNOSTICS ===");
         LOG("curl_easy_perform() failed: %s (code %d)", curl_easy_strerror(res), res);
         LOG("  URL attempted: %s", url ? url : "unknown");
-        LOG("  Error details: Check CURL_INFO messages above for connection diagnostics");
+        LOG("  Resolved IP: %s", primary_ip ? primary_ip : "DNS failed or not resolved");
+        LOG("  OS errno: %ld", os_errno);
+        
+        if (res == CURLE_COULDNT_CONNECT) {
+            LOG("  CURLE_COULDNT_CONNECT: TCP connection failed");
+            LOG("  Possible causes: firewall, wrong IP, port blocked, or socket API issue");
+        } else if (res == CURLE_COULDNT_RESOLVE_HOST) {
+            LOG("  CURLE_COULDNT_RESOLVE_HOST: DNS resolution failed");
+            LOG("  Check DNS settings and network connectivity");
+        } else if (res == CURLE_SSL_CONNECT_ERROR) {
+            LOG("  CURLE_SSL_CONNECT_ERROR: TLS handshake failed");
+            LOG("  mbedTLS may have issues with server certificates or cipher suites");
+        } else if (res == CURLE_OPERATION_TIMEDOUT) {
+            LOG("  CURLE_OPERATION_TIMEDOUT: Connection timed out");
+        }
+        LOG("==============================");
         return 0;
     }
 

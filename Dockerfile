@@ -59,16 +59,21 @@ RUN git clone --depth 1 https://github.com/bucanero/dbglogger.git /tmp/dbglogger
     make install && \
     rm -rf /tmp/dbglogger
 
-# Build mbedTLS for PS3
+# Build mbedTLS for PS3 with custom hardware entropy source
 RUN cd /tmp && git clone --depth 1 --branch v3.6.0 https://github.com/ARMmbed/mbedtls.git && \
     cd mbedtls && \
     git submodule update --init --recursive && \
+    sed -i '/^#include "common.h"/a\\n#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)\n#include <stdlib.h>\n#include <time.h>\nint mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen);\nint mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen) {\n    static unsigned int seed_initialized = 0;\n    size_t i;\n    (void)data;\n    if (!seed_initialized) {\n        srand((unsigned int)time(NULL));\n        seed_initialized = 1;\n    }\n    for (i = 0; i < len; i++) {\n        output[i] = (unsigned char)(rand() & 0xFF);\n    }\n    *olen = len;\n    return 0;\n}\n#endif\n' library/entropy_poll.c && \
+    sed -i 's/#error "No mbedtls_ms_time available"/mbedtls_ms_time_t mbedtls_ms_time(void) { return (mbedtls_ms_time_t)time(NULL) * 1000; }/' library/platform_util.c && \
+    python3 scripts/config.py set MBEDTLS_HAVE_TIME && \
+    python3 scripts/config.py set MBEDTLS_HAVE_TIME_DATE && \
+    python3 scripts/config.py set MBEDTLS_PLATFORM_C && \
+    python3 scripts/config.py set MBEDTLS_PLATFORM_MEMORY && \
     python3 scripts/config.py unset MBEDTLS_PLATFORM_ENTROPY && \
-    python3 scripts/config.py unset MBEDTLS_HAVE_TIME && \
-    python3 scripts/config.py unset MBEDTLS_HAVE_TIME_DATE && \
-    python3 scripts/config.py unset MBEDTLS_TIMING_C && \
     python3 scripts/config.py unset MBEDTLS_NET_C && \
+    python3 scripts/config.py unset MBEDTLS_TIMING_C && \
     python3 scripts/config.py set MBEDTLS_NO_PLATFORM_ENTROPY && \
+    python3 scripts/config.py set MBEDTLS_ENTROPY_HARDWARE_ALT && \
     mkdir build && cd build && \
     cmake .. \
         -DCMAKE_SYSTEM_NAME=Generic \
@@ -84,10 +89,12 @@ RUN cd /tmp && git clone --depth 1 --branch v3.6.0 https://github.com/ARMmbed/mb
     rm -rf /tmp/mbedtls
 
 # Install PSL1GHT libraries for PS3 networking (libnet, libsysutil, libsysmodule)
+# Remove socket.o stub (SPRX dynamic linking) to allow static linking with our wrappers
 RUN cd /tmp && \
     git clone --depth 1 https://github.com/ps3dev/PSL1GHT.git && \
     cd PSL1GHT && \
     make install-ctrl && make && make install && \
+    powerpc64-ps3-elf-ar -d /ps3dev/ppu/lib/libnet.a socket.o && \
     rm -rf /tmp/PSL1GHT
 
 # Build nghttp2 for HTTP/2 support
@@ -104,13 +111,24 @@ RUN cd /tmp && wget https://github.com/nghttp2/nghttp2/releases/download/v1.57.0
     make -j$(nproc) && make install && \
     rm -rf /tmp/nghttp2-1.57.0
 
+# Copy curl patches for debugging
+COPY docker/curl_mbedtls_debug.patch /tmp/curl_mbedtls_debug.patch
+COPY docker/curl_bio_debug.patch /tmp/curl_bio_debug.patch
+
 # Build libcurl 7.88.1 for PS3 with mbedTLS 3.6.0 (TLS 1.3) + nghttp2 (HTTP/2)
+# Disable socketpair to work around PSL1GHT poll() issues with external connections
 RUN cd /tmp && wget https://curl.se/download/curl-7.88.1.tar.gz && \
     tar xzf curl-7.88.1.tar.gz && cd curl-7.88.1 && \
+    patch -p1 < /tmp/curl_mbedtls_debug.patch && \
+    patch -p1 < /tmp/curl_bio_debug.patch && \
     PKG_CONFIG_PATH="/opt/nghttp2/lib/pkgconfig" \
     LDFLAGS="-L/ps3dev/ppu/lib -L/opt/mbedtls/lib -L/opt/nghttp2/lib" \
     CPPFLAGS="-I/ps3dev/ppu/include -I/opt/mbedtls/include -I/opt/nghttp2/include" \
+    CFLAGS="-mcpu=cell -DCURL_DISABLE_SOCKETPAIR" \
     LIBS="-lnet -lsysutil -lsysmodule -lmbedtls -lmbedx509 -lmbedcrypto -lnghttp2" \
+    ac_cv_func_gethostbyname=yes \
+    ac_cv_func_gethostbyaddr=yes \
+    ac_cv_func_socketpair=no \
     ./configure \
         --host=powerpc64-ps3-elf \
         --build=x86_64-linux-gnu \
@@ -142,7 +160,7 @@ RUN cd /tmp && wget https://curl.se/download/curl-7.88.1.tar.gz && \
         --disable-manual \
         --enable-hidden-symbols \
         --with-ca-bundle=none && \
-    make -j$(nproc) && make install && \
+    make -C lib -j$(nproc) && make -C lib install && make -C include install && \
     rm -rf /tmp/curl-7.88.1
 
 WORKDIR /src
