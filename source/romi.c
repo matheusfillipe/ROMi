@@ -28,7 +28,7 @@ static int search_active;
 
 static char refresh_url[256];
 
-static Config config;
+Config config;
 static Config config_temp;
 
 static int font_height;
@@ -518,6 +518,16 @@ static void romi_do_tail(void)
     int available_center_width = VITA_WIDTH - right - left;
     romi_truncate_text(truncated_text, sizeof(truncated_text), text, available_center_width);
     romi_draw_text_z((VITA_WIDTH - romi_text_width(truncated_text)) / 2, bottom_y, ROMI_FONT_Z, ROMI_COLOR_TEXT_TAIL, truncated_text);
+
+    // Show proxy fallback warning at bottom right
+    extern int proxy_failed;
+    if (proxy_failed)
+    {
+        const char* proxy_msg = "Proxy failed";
+        int msg_width = romi_text_width(proxy_msg);
+        int x = VITA_WIDTH - msg_width - 10;
+        romi_draw_text(x, bottom_y, 0xFFFF4444, proxy_msg);
+    }
 }
 
 static void romi_do_error(void)

@@ -107,6 +107,9 @@ void romi_load_config(Config* config)
     config->db_update_url[0] = '\0';
     config->storage_device_index = 0;
     romi_strncpy(config->storage_device_path, sizeof(config->storage_device_path), "/dev_hdd0/");
+    config->proxy_url[0] = '\0';
+    config->proxy_user[0] = '\0';
+    config->proxy_pass[0] = '\0';
     romi_strncpy(config->language, sizeof(config->language), romi_get_user_language());
 
     char data[4096];
@@ -164,6 +167,12 @@ void romi_load_config(Config* config)
             romi_strncpy(config->storage_device_path, sizeof(config->storage_device_path), value);
             LOG("loaded storage device path: %s", config->storage_device_path);
         }
+        else if (romi_stricmp(key, "proxy_url") == 0)
+            romi_strncpy(config->proxy_url, sizeof(config->proxy_url), value);
+        else if (romi_stricmp(key, "proxy_user") == 0)
+            romi_strncpy(config->proxy_user, sizeof(config->proxy_user), value);
+        else if (romi_stricmp(key, "proxy_pass") == 0)
+            romi_strncpy(config->proxy_pass, sizeof(config->proxy_pass), value);
     }
 }
 
@@ -246,6 +255,15 @@ void romi_save_config(const Config* config)
 
     if (config->storage_device_path[0] != '\0')
         len += romi_snprintf(data + len, sizeof(data) - len, "storage_device %s\n", config->storage_device_path);
+
+    if (config->proxy_url[0])
+    {
+        len += romi_snprintf(data + len, sizeof(data) - len, "proxy_url %s\n", config->proxy_url);
+        if (config->proxy_user[0])
+            len += romi_snprintf(data + len, sizeof(data) - len, "proxy_user %s\n", config->proxy_user);
+        if (config->proxy_pass[0])
+            len += romi_snprintf(data + len, sizeof(data) - len, "proxy_pass %s\n", config->proxy_pass);
+    }
 
     char path[256];
     romi_snprintf(path, sizeof(path), "%s/config.txt", romi_get_config_folder());

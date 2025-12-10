@@ -57,6 +57,16 @@ storage_device /dev_usb000/            # Storage device path
 no_music 1                             # Music disabled (0=on, 1=off)
 ```
 
+## Proxy Configuratio
+
+It is possible to configure a proxy:
+
+```ini
+proxy_url http://proxy.example.com:8080   # HTTP/HTTPS proxy URL
+proxy_user username                        # Optional: proxy username
+proxy_pass password                        # Optional: proxy password
+```
+
 ## ROM Storage Organization
 
 ROMs are automatically organized by platform:

@@ -61,6 +61,11 @@ rpcs3-deploy-remote: rpcs3-clean
 	@cp -v pkgfiles/USRDIR/LANG/*.yts "$(RPCS3_USRDIR)/LANG/"
 	@cp -v tools/sources.txt "$(RPCS3_USRDIR)/"
 	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > "$(RPCS3_USRDIR)/config.txt"
+	@if [ -n "$(PROXY_URL)" ]; then \
+		echo "proxy_url $(PROXY_URL)" >> "$(RPCS3_USRDIR)/config.txt"; \
+		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> "$(RPCS3_USRDIR)/config.txt"; \
+		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> "$(RPCS3_USRDIR)/config.txt"; \
+	fi
 	@echo ""
 	@echo "✓ RPCS3 remote database mode configured!"
 	@echo "  Database URL: https://matheusfillipe.github.io/ROMi/romi_db.tsv"
@@ -95,6 +100,11 @@ ps3-debug-remote-db: docker-clean docker-build-debug ps3-clean
 	@echo "Deploying with remote database configuration..."
 	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
 	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > /tmp/romi_config.txt
+	@if [ -n "$(PROXY_URL)" ]; then \
+		echo "proxy_url $(PROXY_URL)" >> /tmp/romi_config.txt; \
+		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> /tmp/romi_config.txt; \
+		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> /tmp/romi_config.txt; \
+	fi
 	@curl -T /tmp/romi_config.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/config.txt"
 	@rm /tmp/romi_config.txt
 	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"

@@ -93,6 +93,9 @@ typedef struct Config {
     char db_update_url[1024];
     int storage_device_index;
     char storage_device_path[256];
+    char proxy_url[512];
+    char proxy_user[128];
+    char proxy_pass[128];
 } Config;
 
 int romi_db_reload(char* error, uint32_t error_size);

@@ -93,6 +93,8 @@ typedef struct
     size_t size;
 } curl_memory_t;
 
+extern Config config;
+int proxy_failed = 0;
 
 static sys_mutex_t g_dialog_lock;
 static uint32_t cpu_temp_c[2];
@@ -1408,6 +1410,41 @@ void romi_curl_init(CURL *curl)
     // request using SSL for the FTP transfer if available
     curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_TRY);
 
+    // Configure HTTP/HTTPS proxy if provided in config
+    if (config.proxy_url[0] && !proxy_failed)
+    {
+        curl_easy_setopt(curl, CURLOPT_PROXY, config.proxy_url);
+        LOG("CURL: Using proxy %s", config.proxy_url);
+
+        // Set proxy authentication if provided
+        if (config.proxy_user[0])
+        {
+            char proxy_auth[256];
+            if (config.proxy_pass[0])
+                romi_snprintf(proxy_auth, sizeof(proxy_auth), "%s:%s",
+                             config.proxy_user, config.proxy_pass);
+            else
+                romi_strncpy(proxy_auth, sizeof(proxy_auth), config.proxy_user);
+
+            curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, proxy_auth);
+            LOG("CURL: Proxy authentication configured");
+        }
+
+        // Set proxy type to auto-detect (supports HTTP, HTTPS, SOCKS4, SOCKS5)
+        curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+
+        // Disable SSL verification when using TLS-terminating proxy (mitmproxy, squid ssl_bump)
+        // This allows the proxy to intercept and re-encrypt with modern ciphers
+        // Security: Proxy validates upstream, acceptable for ROM downloads
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        LOG("CURL: SSL verification disabled for TLS-terminating proxy");
+    }
+    else if (proxy_failed)
+    {
+        LOG("CURL: Proxy previously failed, using direct connection");
+    }
+
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, ROMI_CURL_BUFFER_SIZE);
     curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
@@ -1518,8 +1555,42 @@ int romi_http_response_length(romi_http* http, int64_t* length)
 
     if(res != CURLE_OK)
     {
-        LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return 0;
+        // Check if error is proxy-related
+        if ((res == CURLE_COULDNT_RESOLVE_PROXY ||
+             res == CURLE_COULDNT_CONNECT) &&
+            config.proxy_url[0] && !proxy_failed)
+        {
+            LOG("CURL: Proxy connection failed (%s), falling back to direct", curl_easy_strerror(res));
+            proxy_failed = 1;
+
+            // Get the URL before cleanup
+            char *url = NULL;
+            curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &url);
+
+            // Cleanup and retry without proxy
+            curl_easy_cleanup(http->curl);
+            http->curl = romi_curl_init_throughput(1);
+            if (!http->curl)
+            {
+                LOG("curl init error on retry");
+                return 0;
+            }
+
+            // Re-apply request configuration
+            if (url)
+                curl_easy_setopt(http->curl, CURLOPT_URL, url);
+            curl_easy_setopt(http->curl, CURLOPT_NOBODY, 1L);
+            curl_easy_setopt(http->curl, CURLOPT_NOPROGRESS, 1L);
+
+            // Retry request
+            res = curl_easy_perform(http->curl);
+        }
+
+        if(res != CURLE_OK)
+        {
+            LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+            return 0;
+        }
     }
 
     long status = 0;
@@ -1556,8 +1627,49 @@ int romi_http_read(romi_http* http, void* write_func, void* write_data, void* xf
 
     if(res != CURLE_OK)
     {
-        LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return 0;
+        // Check if error is proxy-related
+        if ((res == CURLE_COULDNT_RESOLVE_PROXY ||
+             res == CURLE_COULDNT_CONNECT) &&
+            config.proxy_url[0] && !proxy_failed)
+        {
+            LOG("CURL: Proxy connection failed (%s), falling back to direct", curl_easy_strerror(res));
+            proxy_failed = 1;
+
+            // Get the URL before cleanup
+            char *url = NULL;
+            curl_easy_getinfo(http->curl, CURLINFO_EFFECTIVE_URL, &url);
+
+            // Cleanup and retry without proxy
+            curl_easy_cleanup(http->curl);
+            http->curl = romi_curl_init_throughput(1);
+            if (!http->curl)
+            {
+                LOG("curl init error on retry");
+                return 0;
+            }
+
+            // Re-apply request configuration
+            if (url)
+                curl_easy_setopt(http->curl, CURLOPT_URL, url);
+            curl_easy_setopt(http->curl, CURLOPT_NOBODY, 0L);
+            curl_easy_setopt(http->curl, CURLOPT_WRITEFUNCTION, write_func);
+            curl_easy_setopt(http->curl, CURLOPT_WRITEDATA, write_data);
+            if (xferinfo_func)
+            {
+                curl_easy_setopt(http->curl, CURLOPT_XFERINFOFUNCTION, xferinfo_func);
+                curl_easy_setopt(http->curl, CURLOPT_XFERINFODATA, NULL);
+                curl_easy_setopt(http->curl, CURLOPT_NOPROGRESS, 0L);
+            }
+
+            // Retry request
+            res = curl_easy_perform(http->curl);
+        }
+
+        if(res != CURLE_OK)
+        {
+            LOG("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+            return 0;
+        }
     }
 
     // Diagnostic logging to identify rate limiting vs PS3 hardware issues

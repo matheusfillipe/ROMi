@@ -9,6 +9,19 @@ Python script for generating ROM databases from Myrient ROM archives.
 - **No guarantees** - Downloads may be slow, fail, or become unavailable at any time
 - **Use responsibly** - Respect Myrient's bandwidth and terms of service
 
+## Proxy Recommendation
+
+**Using a proxy with Myrient downloads is highly recommended** for improved speeds and reliability. Myrient's CDN can be rate-limited or slow from certain regions.
+
+Configure proxy in ROMi's `config.txt`:
+```ini
+proxy_url http://your-proxy:8080
+proxy_user username         # optional
+proxy_pass password         # optional
+```
+
+ROMi automatically falls back to direct connection if the proxy fails.
+
 ## Installation
 
 ```bash

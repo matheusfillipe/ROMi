@@ -21,6 +21,10 @@ static size_t write_file_callback(void* buffer, size_t size, size_t nmemb, void*
     void* fp = stream;
     size_t realsize = size * nmemb;
 
+    // Reset timer on first actual data received (handles proxy retry delays)
+    if (download_current == 0 && realsize > 0)
+        download_start_time = romi_time_msec();
+
     if (romi_write(fp, buffer, realsize))
     {
         download_current += realsize;
