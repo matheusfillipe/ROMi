@@ -1,7 +1,7 @@
 - [x] i18n
 - [-] Check checksums from inside zips (mosst dont have one....)
 - [ ] issue where games will just restart ps3 instantly
-- [ ] missing games in databank? too small?
+- [x] missing games in databank? too small?
 - [ ] slow download speeds
 - [x] change background image
 - [x] change song

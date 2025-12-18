@@ -12,7 +12,7 @@ PS3_IP ?= 192.168.1.100
 PS3_FTP_PORT ?= 21
 PS3_FTP := ftp://$(PS3_IP):$(PS3_FTP_PORT)
 
-.PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-build rpcs3-db rpcs3-deploy rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
+.PHONY: docker-build docker-build-debug docker-clean docker-image rpcs3-build rpcs3-db rpcs3-deploy rpcs3-clean ps3-ensure-dir ps3-upload-pkg ps3-upload-config ps3-upload-config-remote ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 
 # ---- helper: pull image from Docker Hub or build locally ----
 docker-image:
@@ -63,8 +63,8 @@ rpcs3-deploy-remote: rpcs3-clean
 	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > "$(RPCS3_USRDIR)/config.txt"
 	@if [ -n "$(PROXY_URL)" ]; then \
 		echo "proxy_url $(PROXY_URL)" >> "$(RPCS3_USRDIR)/config.txt"; \
-		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> "$(RPCS3_USRDIR)/config.txt"; \
-		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> "$(RPCS3_USRDIR)/config.txt"; \
+		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> "$(RPCS3_USRDIR)/config.txt" || true; \
+		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> "$(RPCS3_USRDIR)/config.txt" || true; \
 	fi
 	@echo ""
 	@echo "✓ RPCS3 remote database mode configured!"
@@ -73,50 +73,77 @@ rpcs3-deploy-remote: rpcs3-clean
 	@echo "  Language files: *.yts"
 	@echo "  Package deployed to: $(RPCS3_USRDIR)"
 
+ps3-ensure-dir:
+	@echo "Ensuring ROMi directories exist on PS3..."
+	@curl -s -Q "MKD /dev_hdd0/game/ROMI00001" "$(PS3_FTP)/" 2>/dev/null || true
+	@curl -s -Q "MKD /dev_hdd0/game/ROMI00001/USRDIR" "$(PS3_FTP)/" 2>/dev/null || true
+	@curl -s -Q "MKD /dev_hdd0/game/ROMI00001/USRDIR/LANG" "$(PS3_FTP)/" 2>/dev/null || true
+	@echo "✓ Directory structure ready"
+
 ps3-clean:
 	@echo "Cleaning old database files from PS3..."
-	@echo -e "rm romi_*.tsv\nrm sources.txt\nrm config.txt\nquit" \
-	  | curl -s -T - "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/" \
-	  --ftp-method nocwd -Q "-SITE CHMOD 755 ." 2>/dev/null || true
-	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_db.tsv" "$(PS3_FTP)/" 2>/dev/null || true
-	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/sources.txt" "$(PS3_FTP)/" 2>/dev/null || true
-	@curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/config.txt" "$(PS3_FTP)/" 2>/dev/null || true
-	@for plat in GB GBC GBA NES SNES Genesis SMS PSX N64 Arcade; do \
-		curl -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_$${plat}.tsv" "$(PS3_FTP)/" 2>/dev/null || true; \
+	@curl -s -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_db.tsv" "$(PS3_FTP)/" >/dev/null 2>&1 || true
+	@curl -s -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/sources.txt" "$(PS3_FTP)/" >/dev/null 2>&1 || true
+	@curl -s -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/config.txt" "$(PS3_FTP)/" >/dev/null 2>&1 || true
+	@for plat in GB GBC GBA NES SNES Genesis SMS PSX PS2 PS3 N64 Arcade; do \
+		curl -s -Q "DELE /dev_hdd0/game/ROMI00001/USRDIR/romi_$${plat}.tsv" "$(PS3_FTP)/" >/dev/null 2>&1 || true; \
 	done
 
-ps3-deploy: ps3-clean
+ps3-upload-pkg:
+	@echo "Uploading PKG to PS3..."
 	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
+	@echo "✓ PKG uploaded to /dev_hdd0/packages/romi.pkg"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Go to Package Manager on your PS3"
+	@echo "  2. Install 'romi.pkg'"
+	@echo "  3. Run 'make ps3-upload-config' to upload database files"
+
+ps3-upload-config: ps3-ensure-dir ps3-clean
+	@echo "Uploading database files to PS3..."
 	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"
 	@for f in tools/databases/*.tsv; do \
 	  curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/$$(basename $$f)"; \
-	done 2>/dev/null || true
+	done
+	@echo "Uploading translations to PS3..."
+	@for f in pkgfiles/USRDIR/LANG/*.yts; do \
+	  curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/LANG/$$(basename $$f)"; \
+	done
+	@echo "✓ Database files and translations uploaded"
+
+ps3-deploy: ps3-upload-pkg ps3-upload-config
+	@echo "✓ Full deployment complete"
 
 ps3-debug: docker-clean docker-build-debug ps3-deploy
 	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
 
-ps3-debug-remote-db: docker-clean docker-build-debug ps3-clean
-	@echo "Deploying with remote database configuration..."
-	@curl -T src.pkg "$(PS3_FTP)/dev_hdd0/packages/romi.pkg"
+ps3-upload-config-remote: ps3-ensure-dir ps3-clean
+	@echo "Uploading remote database configuration to PS3..."
 	@echo "url https://matheusfillipe.github.io/ROMi/romi_db.tsv" > /tmp/romi_config.txt
 	@if [ -n "$(PROXY_URL)" ]; then \
 		echo "proxy_url $(PROXY_URL)" >> /tmp/romi_config.txt; \
-		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> /tmp/romi_config.txt; \
-		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> /tmp/romi_config.txt; \
+		[ -n "$(PROXY_USER)" ] && echo "proxy_user $(PROXY_USER)" >> /tmp/romi_config.txt || true; \
+		[ -n "$(PROXY_PASS)" ] && echo "proxy_pass $(PROXY_PASS)" >> /tmp/romi_config.txt || true; \
 	fi
 	@curl -T /tmp/romi_config.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/config.txt"
 	@rm /tmp/romi_config.txt
 	@curl -T tools/sources.txt "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/sources.txt"
+	@echo "Uploading translations to PS3..."
+	@for f in pkgfiles/USRDIR/LANG/*.yts; do \
+	  curl -T "$$f" "$(PS3_FTP)/dev_hdd0/game/ROMI00001/USRDIR/LANG/$$(basename $$f)"; \
+	done
+	@echo "✓ Remote database configuration and translations uploaded"
+
+ps3-debug-remote-db: docker-clean docker-build-debug ps3-upload-pkg ps3-upload-config-remote
 	@echo ""
 	@echo "✓ Remote database mode configured!"
 	@echo "  Database URL: https://matheusfillipe.github.io/ROMi/romi_db.tsv"
-	@echo "  Sources file: tools/sources.txt uploaded"
+	@echo "  PKG uploaded to: /dev_hdd0/packages/romi.pkg"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Install the package on your PS3"
-	@echo "  2. Run ROMi"
-	@echo "  3. Press 'Refresh' in the menu to download the database"
+	@echo "  1. Install the package on your PS3 (Package Manager → romi.pkg)"
+	@echo "  2. Run ROMi and press 'Refresh' to download database"
 	@echo ""
 	@echo "Waiting for debug logs (multicast 239.255.0.100:30000)..."
 	@socat udp4-recv:30000,ip-add-membership=239.255.0.100:0.0.0.0 -
@@ -124,7 +151,7 @@ endif
 
 # (rest of your original Makefile as before)
 
-DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy rpcs3-deploy-remote rpcs3-clean ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
+DOCKER_TARGETS := docker-image docker-build docker-build-debug docker-clean rpcs3-db rpcs3-deploy rpcs3-deploy-remote rpcs3-clean ps3-ensure-dir ps3-upload-pkg ps3-upload-config ps3-upload-config-remote ps3-deploy ps3-debug ps3-debug-remote-db ps3-clean
 ifneq ($(filter $(DOCKER_TARGETS),$(MAKECMDGOALS)),)
   PSL1GHT_SKIP := 1
 endif

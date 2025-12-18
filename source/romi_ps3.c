@@ -1472,9 +1472,18 @@ static CURL* romi_curl_init_throughput(int enable_throughput_mode)
 
     if (enable_throughput_mode)
     {
-        // Disable TCP_NODELAY for bulk transfers (enable Nagle's algorithm)
-        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
-        LOG("CURL: Throughput mode ENABLED (Nagle's algorithm ON, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
+        // Keep TCP_NODELAY=1 when using proxy to avoid latency issues
+        // Only disable for direct connections where Nagle's algorithm helps
+        if (config.proxy_url[0])
+        {
+            LOG("CURL: Throughput mode with proxy (TCP_NODELAY=1 for low latency, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
+        }
+        else
+        {
+            // Disable TCP_NODELAY for bulk transfers (enable Nagle's algorithm)
+            curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 0L);
+            LOG("CURL: Throughput mode ENABLED (Nagle's algorithm ON, CURL buffer=%d KB)", ROMI_CURL_BUFFER_SIZE / 1024);
+        }
 
         // Add socket tuning callback (requires CURLOPT_SOCKOPTFUNCTION support)
         #ifdef CURLOPT_SOCKOPTFUNCTION
