@@ -21,6 +21,10 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: pages-deployment
+  cancel-in-progress: false
+
 jobs:
   update-databases:
     runs-on: ubuntu-latest
