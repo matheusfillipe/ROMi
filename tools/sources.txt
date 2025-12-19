@@ -14,7 +14,7 @@ GB      https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/
 GBA     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Advance/
 GBC     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Color/
 GENESIS https://myrient.erista.me/files/No-Intro/Sega%20-%20Mega%20Drive%20-%20Genesis/
-MAME    https://myrient.erista.me/files/MAME/ROMs%20(split)/
+MAME    https://myrient.erista.me/files/MAME/Reference%20Sets/0.78%20ROMs%20%28non-merged%29/
 NES     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Nintendo%20Entertainment%20System%20%28Headered%29/
 PS2     https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%202/
 PS3     https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%203/

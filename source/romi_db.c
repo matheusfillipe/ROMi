@@ -47,7 +47,7 @@ static const char* platform_suffixes[] = {
     "ROMS/ATARI5200",
     "ROMS/ATARI7800",
     "ROMS/LYNX",
-    "ROMS/MAME"
+    "ROMS/MAMEPLUS"
 };
 
 #define MAX_URL_LENGTH 512

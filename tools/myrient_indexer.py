@@ -40,7 +40,7 @@ PLATFORM_URLS = {
     "ATARI5200": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%205200/",
     "ATARI7800": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%207800%20%28BIN%29/",
     "ATARILYNX": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28LNX%29/",
-    "MAME": "https://myrient.erista.me/files/MAME/ROMs%20(split)/",
+    "MAME": "https://myrient.erista.me/files/MAME/Reference%20Sets/0.78%20ROMs%20%28non-merged%29/",
 }
 
 PLATFORM_FILENAME_MAP = {

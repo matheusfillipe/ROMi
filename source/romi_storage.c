@@ -135,7 +135,7 @@ RomiStorageResult romi_storage_download(const DbItem* item, RomiStorageProgress 
 
     RomiStorageResult result = StorageOK;
 
-    if (romi_is_zip_file(temp_path))
+    if (romi_is_zip_file(temp_path) && item->platform != PlatformMAME)
     {
         if (progress)
             progress("Extracting...", 0.5f);
