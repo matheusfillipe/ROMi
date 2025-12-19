@@ -167,6 +167,9 @@ static const char* platform_str(RomiPlatform p)
         case PlatformGBA: return "GBA";
         case PlatformGenesis: return "Genesis";
         case PlatformSMS: return "SMS";
+        case PlatformAtari2600: return "2600";
+        case PlatformAtari7800: return "7800";
+        case PlatformAtariLynx: return "Lynx";
         case PlatformMAME: return "MAME";
         default: return "?";
     }

@@ -38,7 +38,7 @@ PLATFORM_URLS = {
     "SMS": "https://myrient.erista.me/files/No-Intro/Sega%20-%20Master%20System%20-%20Mark%20III/",
     "ATARI2600": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%202600/",
     "ATARI7800": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%207800%20%28BIN%29/",
-    "ATARILYNX": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28BLL%29/",
+    "ATARILYNX": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28LNX%29/",
 }
 
 PLATFORM_FILENAME_MAP = {
@@ -66,7 +66,6 @@ VARIANT_PATTERNS = [
     re.compile(r"[\(\[]Prototype[\)\]]", re.IGNORECASE),
     re.compile(r"[\(\[]Beta[\)\]]", re.IGNORECASE),
     re.compile(r"[\(\[]Pirate[\)\]]", re.IGNORECASE),
-    re.compile(r"[\(\[]Unl[\)\]]", re.IGNORECASE),
 ]
 
 DISC_PATTERN = re.compile(r"[\(\[]Disc\s*(\d+)[\)\]]", re.IGNORECASE)

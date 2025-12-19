@@ -6,13 +6,16 @@
 # To use a different ROM source, change the URLs below.
 # URLs must end with / and filenames will be appended directly.
 
-GB      https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/
-GBA     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Advance/
-GBC     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Color/
+PSX https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation/
+PS2 https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%202/
+PS3 https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%203/
+NES https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Nintendo%20Entertainment%20System%20%28Headered%29/
+SNES https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/
+GB https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy/
+GBC https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Color/
+GBA https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Advance/
 GENESIS https://myrient.erista.me/files/No-Intro/Sega%20-%20Mega%20Drive%20-%20Genesis/
-NES     https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Nintendo%20Entertainment%20System%20%28Headered%29/
-PS2     https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%202/
-PS3     https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation%203/
-PSX     https://myrient.erista.me/files/Redump/Sony%20-%20PlayStation/
-SMS     https://myrient.erista.me/files/No-Intro/Sega%20-%20Master%20System%20-%20Mark%20III/
-SNES    https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Super%20Nintendo%20Entertainment%20System/
+SMS https://myrient.erista.me/files/No-Intro/Sega%20-%20Master%20System%20-%20Mark%20III/
+ATARI2600 https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%202600/
+ATARI7800 https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%207800%20%28BIN%29/
+ATARILYNX https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28LNX%29/

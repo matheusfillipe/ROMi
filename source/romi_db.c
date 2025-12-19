@@ -307,7 +307,6 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
 
     db_total = 0;
     db_size = 0;
-    uint32_t prev_size = 0;
 
     LOG("downloading database from %s", update_url);
 
