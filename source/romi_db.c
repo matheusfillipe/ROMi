@@ -26,7 +26,9 @@ static uint32_t db_item_count;
 static const char* platform_names[] = {
     "Unknown", "PSX", "PS2", "PS3",
     "NES", "SNES", "GB", "GBC", "GBA",
-    "Genesis", "SMS", "MAME"
+    "Genesis", "SMS",
+    "Atari2600", "Atari7800", "AtariLynx",
+    "MAME"
 };
 
 static const char* platform_suffixes[] = {
@@ -41,6 +43,9 @@ static const char* platform_suffixes[] = {
     "ROMS/GBA",
     "ROMS/Genesis",
     "ROMS/SMS",
+    "ROMS/ATARI2600",
+    "ROMS/ATARI7800",
+    "ROMS/LYNX",
     "ROMS/MAME"
 };
 
@@ -63,6 +68,9 @@ RomiPlatform romi_parse_platform(const char* str)
     if (romi_stricmp(str, "GBA") == 0) return PlatformGBA;
     if (romi_stricmp(str, "Genesis") == 0 || romi_stricmp(str, "MD") == 0) return PlatformGenesis;
     if (romi_stricmp(str, "SMS") == 0) return PlatformSMS;
+    if (romi_stricmp(str, "Atari2600") == 0 || romi_stricmp(str, "ATARI") == 0) return PlatformAtari2600;
+    if (romi_stricmp(str, "Atari7800") == 0) return PlatformAtari7800;
+    if (romi_stricmp(str, "AtariLynx") == 0 || romi_stricmp(str, "LYNX") == 0) return PlatformAtariLynx;
     if (romi_stricmp(str, "MAME") == 0) return PlatformMAME;
 
     return PlatformUnknown;
@@ -106,18 +114,21 @@ const char* romi_platform_folder(RomiPlatform p)
 uint32_t romi_platform_filter(RomiPlatform p)
 {
     switch (p) {
-        case PlatformPSX:     return DbFilterPlatformPSX;
-        case PlatformPS2:     return DbFilterPlatformPS2;
-        case PlatformPS3:     return DbFilterPlatformPS3;
-        case PlatformNES:     return DbFilterPlatformNES;
-        case PlatformSNES:    return DbFilterPlatformSNES;
-        case PlatformGB:      return DbFilterPlatformGB;
-        case PlatformGBC:     return DbFilterPlatformGBC;
-        case PlatformGBA:     return DbFilterPlatformGBA;
-        case PlatformGenesis: return DbFilterPlatformGenesis;
-        case PlatformSMS:     return DbFilterPlatformSMS;
-        case PlatformMAME:    return DbFilterPlatformMAME;
-        default:              return 0;
+        case PlatformPSX:         return DbFilterPlatformPSX;
+        case PlatformPS2:         return DbFilterPlatformPS2;
+        case PlatformPS3:         return DbFilterPlatformPS3;
+        case PlatformNES:         return DbFilterPlatformNES;
+        case PlatformSNES:        return DbFilterPlatformSNES;
+        case PlatformGB:          return DbFilterPlatformGB;
+        case PlatformGBC:         return DbFilterPlatformGBC;
+        case PlatformGBA:         return DbFilterPlatformGBA;
+        case PlatformGenesis:     return DbFilterPlatformGenesis;
+        case PlatformSMS:         return DbFilterPlatformSMS;
+        case PlatformAtari2600:   return DbFilterPlatformAtari2600;
+        case PlatformAtari7800:   return DbFilterPlatformAtari7800;
+        case PlatformAtariLynx:   return DbFilterPlatformAtariLynx;
+        case PlatformMAME:        return DbFilterPlatformMAME;
+        default:                  return 0;
     }
 }
 
@@ -295,7 +306,8 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
         return 0;
 
     db_total = 0;
-    uint32_t prev_size = db_size;
+    db_size = 0;
+    uint32_t prev_size = 0;
 
     LOG("downloading database from %s", update_url);
 
@@ -326,7 +338,7 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
     if (!romi_http_read(http, &write_update_data, NULL, NULL))
     {
         romi_snprintf(error, error_size, "%s", _("HTTP download error"));
-        db_size = prev_size;
+        db_size = 0;
         romi_http_close(http);
         return 0;
     }
@@ -336,22 +348,22 @@ int romi_db_update(const char* update_url, char* error, uint32_t error_size)
     char db_path[256];
     romi_snprintf(db_path, sizeof(db_path), "%s/romi_db.tsv", romi_get_config_folder());
 
-    LOG("saving downloaded database to %s (%u bytes)", db_path, db_size - prev_size);
+    LOG("saving downloaded database to %s (%u bytes)", db_path, db_size);
 
     void* fp = romi_create(db_path);
     if (!fp)
     {
         LOG("failed to create database file %s", db_path);
-        db_size = prev_size;
+        db_size = 0;
         romi_snprintf(error, error_size, _("Failed to save database file"));
         return 0;
     }
 
-    if (!romi_write(fp, db_data + prev_size, db_size - prev_size))
+    if (!romi_write(fp, db_data, db_size))
     {
         LOG("failed to write database file");
         romi_close(fp);
-        db_size = prev_size;
+        db_size = 0;
         romi_snprintf(error, error_size, _("Failed to write database file"));
         return 0;
     }

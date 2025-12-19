@@ -15,6 +15,9 @@ typedef enum {
     PlatformGBA,
     PlatformGenesis,
     PlatformSMS,
+    PlatformAtari2600,
+    PlatformAtari7800,
+    PlatformAtariLynx,
     PlatformMAME,
     PlatformCount
 } RomiPlatform;
@@ -53,24 +56,29 @@ typedef enum {
     DbFilterRegionWorld = 0x0008,
     DbFilterRegionASA   = 0x0010,
 
-    DbFilterPlatformPSX     = 0x000100,
-    DbFilterPlatformPS2     = 0x000200,
-    DbFilterPlatformPS3     = 0x000400,
-    DbFilterPlatformNES     = 0x000800,
-    DbFilterPlatformSNES    = 0x001000,
-    DbFilterPlatformGB      = 0x002000,
-    DbFilterPlatformGBC     = 0x004000,
-    DbFilterPlatformGBA     = 0x008000,
-    DbFilterPlatformGenesis = 0x010000,
-    DbFilterPlatformSMS     = 0x020000,
-    DbFilterPlatformMAME    = 0x040000,
+    DbFilterPlatformPSX         = 0x000100,
+    DbFilterPlatformPS2         = 0x000200,
+    DbFilterPlatformPS3         = 0x000400,
+    DbFilterPlatformNES         = 0x000800,
+    DbFilterPlatformSNES        = 0x001000,
+    DbFilterPlatformGB          = 0x002000,
+    DbFilterPlatformGBC         = 0x004000,
+    DbFilterPlatformGBA         = 0x008000,
+    DbFilterPlatformGenesis     = 0x010000,
+    DbFilterPlatformSMS         = 0x020000,
+    DbFilterPlatformAtari2600   = 0x040000,
+    DbFilterPlatformAtari7800   = 0x080000,
+    DbFilterPlatformAtariLynx   = 0x100000,
+    DbFilterPlatformMAME        = 0x200000,
 
     DbFilterAllRegions = DbFilterRegionUSA | DbFilterRegionEUR | DbFilterRegionJPN |
                          DbFilterRegionWorld | DbFilterRegionASA,
     DbFilterAllPlatforms = DbFilterPlatformPSX | DbFilterPlatformPS2 | DbFilterPlatformPS3 |
                            DbFilterPlatformNES | DbFilterPlatformSNES |
                            DbFilterPlatformGB | DbFilterPlatformGBC | DbFilterPlatformGBA |
-                           DbFilterPlatformGenesis | DbFilterPlatformSMS | DbFilterPlatformMAME,
+                           DbFilterPlatformGenesis | DbFilterPlatformSMS |
+                           DbFilterPlatformAtari2600 | DbFilterPlatformAtari7800 | DbFilterPlatformAtariLynx |
+                           DbFilterPlatformMAME,
     DbFilterAll = DbFilterAllRegions | DbFilterAllPlatforms,
 } DbFilter;
 
