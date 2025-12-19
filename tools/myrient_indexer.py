@@ -40,6 +40,7 @@ PLATFORM_URLS = {
     "ATARI5200": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%205200/",
     "ATARI7800": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%207800%20%28BIN%29/",
     "ATARILYNX": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28LNX%29/",
+    "MAME": "https://myrient.erista.me/files/MAME/ROMs%20(split)/",
 }
 
 PLATFORM_FILENAME_MAP = {
@@ -251,6 +252,11 @@ def parse_platform_listing(html: str, platform: str, base_url: str, limit: int =
 
         full_url = urljoin(base_url, href)
         region = detect_region(name)
+
+        # MAME arcade games default to World region
+        if platform == "MAME" and region == "Unknown":
+            region = "World"
+
         size = parse_size(size_text)
 
         entries.append(RomEntry(
