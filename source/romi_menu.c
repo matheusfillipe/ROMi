@@ -87,6 +87,7 @@ static const struct {
     { "Genesis", PlatformGenesis },
     { "SMS", PlatformSMS },
     { "Atari 2600", PlatformAtari2600 },
+    { "Atari 5200", PlatformAtari5200 },
     { "Atari 7800", PlatformAtari7800 },
     { "Atari Lynx", PlatformAtariLynx },
     { "MAME", PlatformMAME },

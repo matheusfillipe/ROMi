@@ -147,6 +147,10 @@ static void romi_devices_create_folders(void)
         "ROMS/GBA",
         "ROMS/Genesis",
         "ROMS/SMS",
+        "ROMS/ATARI2600",
+        "ROMS/ATARI5200",
+        "ROMS/ATARI7800",
+        "ROMS/LYNX",
         "ROMS/MAME"
     };
 

@@ -27,7 +27,7 @@ static const char* platform_names[] = {
     "Unknown", "PSX", "PS2", "PS3",
     "NES", "SNES", "GB", "GBC", "GBA",
     "Genesis", "SMS",
-    "Atari2600", "Atari7800", "AtariLynx",
+    "Atari2600", "Atari5200", "Atari7800", "AtariLynx",
     "MAME"
 };
 
@@ -44,6 +44,7 @@ static const char* platform_suffixes[] = {
     "ROMS/Genesis",
     "ROMS/SMS",
     "ROMS/ATARI2600",
+    "ROMS/ATARI5200",
     "ROMS/ATARI7800",
     "ROMS/LYNX",
     "ROMS/MAME"
@@ -69,6 +70,7 @@ RomiPlatform romi_parse_platform(const char* str)
     if (romi_stricmp(str, "Genesis") == 0 || romi_stricmp(str, "MD") == 0) return PlatformGenesis;
     if (romi_stricmp(str, "SMS") == 0) return PlatformSMS;
     if (romi_stricmp(str, "Atari2600") == 0 || romi_stricmp(str, "ATARI") == 0) return PlatformAtari2600;
+    if (romi_stricmp(str, "Atari5200") == 0) return PlatformAtari5200;
     if (romi_stricmp(str, "Atari7800") == 0) return PlatformAtari7800;
     if (romi_stricmp(str, "AtariLynx") == 0 || romi_stricmp(str, "LYNX") == 0) return PlatformAtariLynx;
     if (romi_stricmp(str, "MAME") == 0) return PlatformMAME;
@@ -125,6 +127,7 @@ uint32_t romi_platform_filter(RomiPlatform p)
         case PlatformGenesis:     return DbFilterPlatformGenesis;
         case PlatformSMS:         return DbFilterPlatformSMS;
         case PlatformAtari2600:   return DbFilterPlatformAtari2600;
+        case PlatformAtari5200:   return DbFilterPlatformAtari5200;
         case PlatformAtari7800:   return DbFilterPlatformAtari7800;
         case PlatformAtariLynx:   return DbFilterPlatformAtariLynx;
         case PlatformMAME:        return DbFilterPlatformMAME;

@@ -16,6 +16,7 @@ typedef enum {
     PlatformGenesis,
     PlatformSMS,
     PlatformAtari2600,
+    PlatformAtari5200,
     PlatformAtari7800,
     PlatformAtariLynx,
     PlatformMAME,
@@ -67,6 +68,7 @@ typedef enum {
     DbFilterPlatformGenesis     = 0x010000,
     DbFilterPlatformSMS         = 0x020000,
     DbFilterPlatformAtari2600   = 0x040000,
+    DbFilterPlatformAtari5200   = 0x400000,
     DbFilterPlatformAtari7800   = 0x080000,
     DbFilterPlatformAtariLynx   = 0x100000,
     DbFilterPlatformMAME        = 0x200000,
@@ -77,7 +79,8 @@ typedef enum {
                            DbFilterPlatformNES | DbFilterPlatformSNES |
                            DbFilterPlatformGB | DbFilterPlatformGBC | DbFilterPlatformGBA |
                            DbFilterPlatformGenesis | DbFilterPlatformSMS |
-                           DbFilterPlatformAtari2600 | DbFilterPlatformAtari7800 | DbFilterPlatformAtariLynx |
+                           DbFilterPlatformAtari2600 | DbFilterPlatformAtari5200 |
+                           DbFilterPlatformAtari7800 | DbFilterPlatformAtariLynx |
                            DbFilterPlatformMAME,
     DbFilterAll = DbFilterAllRegions | DbFilterAllPlatforms,
 } DbFilter;
