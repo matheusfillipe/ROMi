@@ -36,10 +36,16 @@ PLATFORM_URLS = {
     "GBA": "https://myrient.erista.me/files/No-Intro/Nintendo%20-%20Game%20Boy%20Advance/",
     "GENESIS": "https://myrient.erista.me/files/No-Intro/Sega%20-%20Mega%20Drive%20-%20Genesis/",
     "SMS": "https://myrient.erista.me/files/No-Intro/Sega%20-%20Master%20System%20-%20Mark%20III/",
+    "ATARI2600": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%202600/",
+    "ATARI7800": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%207800%20%28BIN%29/",
+    "ATARILYNX": "https://myrient.erista.me/files/No-Intro/Atari%20-%20Atari%20Lynx%20%28BLL%29/",
 }
 
 PLATFORM_FILENAME_MAP = {
     "GENESIS": "Genesis",
+    "ATARI2600": "Atari2600",
+    "ATARI7800": "Atari7800",
+    "ATARILYNX": "AtariLynx",
 }
 
 REGION_PATTERNS = {
