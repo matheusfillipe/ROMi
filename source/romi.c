@@ -7,6 +7,7 @@
 #include "romi_utils.h"
 #include "romi_style.h"
 #include "romi_queue.h"
+#include "romi_devices.h"
 
 #include <stddef.h>
 #include <mini18n.h>
@@ -572,6 +573,7 @@ static void romi_load_language(const char* lang)
 int main(int argc, const char* argv[])
 {
     romi_start();
+    romi_devices_init();
 
     romi_load_config(&config);
     LOG("Detected system language: %s", config.language);

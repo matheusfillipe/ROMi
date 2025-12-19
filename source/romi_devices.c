@@ -74,11 +74,14 @@ int romi_devices_scan(void)
     }
 
 #ifdef HAS_NTFS_SUPPORT
+    LOG("NTFS support compiled in, scanning for NTFS devices");
     for (int i = 0; i < 8; i++) {
         if (check_ntfs_device(i)) {
             add_ntfs_device(i);
         }
     }
+#else
+    LOG("NTFS support NOT compiled in (rebuild with ENABLE_NTFS=1 to enable)");
 #endif
 
     LOG("scan complete, found %d devices", g_device_count);
@@ -288,14 +291,26 @@ static void get_device_space(const char* path, uint64_t* free, uint64_t* total)
 static int check_ntfs_device(int index)
 {
     char path[64];
-    snprintf(path, sizeof(path), "/dev_NTFS%d", index);
-
     s32 fd;
-    int result = sysLv2FsOpenDir(path, &fd);
-    if (result == 0) {
-        sysLv2FsCloseDir(fd);
-        LOG("found NTFS device at %s", path);
-        return 1;
+    int result;
+
+    // Try multiple path formats that might work
+    const char* path_formats[] = {
+        "/dev_ntfs%d:",     // webMAN format with colon
+        "/dev_ntfs%d",      // Without colon
+        "/dev_NTFS%d:",     // Uppercase with colon
+        "/dev_NTFS%d",      // Uppercase without colon
+    };
+
+    for (int i = 0; i < 4; i++) {
+        snprintf(path, sizeof(path), path_formats[i], index);
+        result = sysLv2FsOpenDir(path, &fd);
+        LOG("checking NTFS path %s: result=0x%08X (%d)", path, (unsigned int)result, result);
+        if (result == 0) {
+            sysLv2FsCloseDir(fd);
+            LOG("found NTFS device at %s", path);
+            return 1;
+        }
     }
 
     return 0;
@@ -311,7 +326,7 @@ static void add_ntfs_device(int index)
     dev->type = DeviceTypeNTFS;
     dev->device_index = index;
 
-    snprintf(dev->path, sizeof(dev->path), "/dev_NTFS%d/", index);
+    snprintf(dev->path, sizeof(dev->path), "/dev_ntfs%d:/", index);
     snprintf(dev->label, sizeof(dev->label), "NTFS Drive %d", index);
 
     dev->available = 1;

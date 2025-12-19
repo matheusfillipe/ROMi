@@ -31,7 +31,7 @@ docker-build: docker-image
 
 docker-build-debug: docker-image
 	@docker run --rm --platform linux/amd64 \
-	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1
+	  -v "$(CURDIR)":/src -w /src $(DOCKER_IMAGE) make pkg DEBUGLOG=1 $(if $(ENABLE_NTFS),ENABLE_NTFS=1,)
 
 docker-clean: docker-image
 	@docker run --rm --platform linux/amd64 \
@@ -217,6 +217,11 @@ endif
 
 ifdef CFLAGS_EXTRA
 CFLAGS		+=	$(CFLAGS_EXTRA)
+endif
+
+# Enable NTFS support by default (disable with ENABLE_NTFS=0)
+ifndef DISABLE_NTFS
+CFLAGS		+=	-DHAS_NTFS_SUPPORT
 endif
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
