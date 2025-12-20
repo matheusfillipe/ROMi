@@ -217,7 +217,7 @@ int romi_download_rom(const DbItem* item, RomiDownloadProgress progress)
 
     int result = 1;
 
-    if (romi_is_zip_file(temp_path))
+    if (romi_is_zip_file(temp_path) && item->platform != PlatformMAME)
     {
         if (progress)
             progress("Extracting...", 0, 0);

@@ -253,17 +253,18 @@ static void music_update_thread(void)
 void init_music(void)
 {
     MikMod_InitThreads();
-    
+
     /* register the driver and module loaders */
-    MikMod_RegisterDriver(&drv_psl1ght);    
+    MikMod_RegisterDriver(&drv_psl1ght);
     MikMod_RegisterLoader(&load_s3m);
     MikMod_RegisterLoader(&load_it);
     MikMod_RegisterLoader(&load_xm);
     MikMod_RegisterLoader(&load_mod);
-    
+
     /* init the library */
     md_mode |= DMODE_SOFT_MUSIC | DMODE_STEREO | DMODE_HQMIXER | DMODE_16BITS;
-    
+    md_musicvolume = 64;  /* 50% volume (0-128 scale) */
+
     if (MikMod_Init("")) {
         LOG("Could not initialize sound: %s", MikMod_strerror(MikMod_errno));
         return;
