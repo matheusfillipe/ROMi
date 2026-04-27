@@ -112,4 +112,4 @@ proxy_pass password         # optional
 
 **Slow downloads**: archive.org rate-limits — use `--full-urls` to avoid double-fetching
 
-**500 errors**: Transient rate limiting from archive.org — retry after a few seconds
+**500 errors**: Usually a transient archive.org CDN error — retry the request
