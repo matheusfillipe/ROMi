@@ -85,18 +85,7 @@ PLATFORM_SOURCES = {
         "subdir": None,
         "skip_prefixes": [],
     },
-    "GG": {
-        "item": "nointro.gg",
-        "ext": ".7z",
-        "subdir": None,
-        "skip_prefixes": [],
-    },
-    "32X": {
-        "item": "nointro.32x",
-        "ext": ".7z",
-        "subdir": None,
-        "skip_prefixes": [],
-    },
+
     "Atari2600": {
         "item": "nointro.atari-2600",
         "ext": ".7z",
@@ -121,84 +110,8 @@ PLATFORM_SOURCES = {
         "subdir": "Atari - Lynx",
         "skip_prefixes": [],
     },
-    "TG16": {
-        "item": "nointro.tg-16",
-        "ext": ".7z",
-        "subdir": None,
-        "skip_prefixes": [],
-    },
-    "WS": {
-        "item": "nointro.ws",
-        "ext": ".7z",
-        "subdir": None,
-        "skip_prefixes": [],
-    },
-    "Coleco": {
-        "item": "NoIntro-Coleco",
-        "ext": ".zip",
-        "subdir": "Coleco - ColecoVision",
-        "skip_prefixes": [],
-    },
-    # --- Disc-based (Redump) ---
-    # NOTE: PS1, PS2, PS3, PSP files on archive.org are marked "private" and return
-    # 500/401 errors when downloaded. These platforms are included here for database
-    # completeness but actual downloads will fail until archive.org makes them public.
-    # For working disc-based downloads, users need to find alternative sources.
-    "PSX": {
-        "item": "Redump.orgSonyPlayStation-NTSC-U-A",
-        "ext": ".zip",
-        "subdir": None,
-        "skip_prefixes": [],
-        "extra_items": [
-            "Redump.orgSonyPlayStation-NTSC-U-B",
-            "Redump.orgSonyPlayStation-NTSC-U-C",
-            "Redump.orgSonyPlayStation-NTSC-U-D",
-            "Redump.orgSonyPlayStation-NTSC-U-F",
-            "Redump.orgSonyPlayStation-NTSC-U-M",
-            "Redump.orgSonyPlayStation-NTSC-U-N",
-            "Redump.orgSonyPlayStation-NTSC-U-P",
-            "Redump.orgSonyPlayStation-NTSC-U-S",
-            "Redump.orgSonyPlayStation-NTSC-U-T",
-            "Redump.orgSonyPlayStation-PAL-A",
-            "Redump.orgSonyPlayStation-PAL-C",
-            "Redump.orgSonyPlayStation-PAL-F",
-            "Redump.orgSonyPlayStation-PAL-P",
-            "Redump.orgSonyPlayStation-PAL-R",
-            "Redump.orgSonyPlayStation-PAL-T",
-        ],
-        "note": "Files are private on archive.org, downloads will fail",
-    },
-    "PS2": {
-        "item": "ps2usaredump1",
-        "ext": ".zip",
-        "subdir": None,
-        "skip_prefixes": [],
-        "extra_items": [
-            "ps2usaredump1_20200816_1458",
-            "sony_playstation2_g",
-            "sony_playstation2_d_part2",
-        ],
-        "note": "Files are private on archive.org, downloads will fail",
-    },
-    "PS3": {
-        "item": "PS3_NOINTRO_USA_1",
-        "ext": ".zip",
-        "subdir": None,
-        "skip_prefixes": [],
-        "extra_items": [
-            "PS3_NOINTRO_USA_2", "PS3_NOINTRO_USA_3", "PS3_NOINTRO_USA_4",
-            "PS3_NOINTRO_USA__5", "PS3_NOINTRO_USA_6", "PS3_NOINTRO_USA_7",
-            "PS3_NOINTRO_USA_8", "PS3_NOINTRO_USA_9", "PS3_NOINTRO_USA_10",
-        ],
-        "note": "Files are private on archive.org, downloads will fail",
-    },
-    "PSP": {
-        "item": "non-redump_sony_playstation_portable",
-        "ext": ".zip",
-        "subdir": None,
-        "skip_prefixes": [],
-        "note": "Files are private on archive.org, downloads will fail",
-    },
+
+
 }
 
 # ROMi platform name mapping (ROMi internal name -> TSV platform name)
@@ -208,9 +121,6 @@ PLATFORM_FILENAME_MAP = {
     "Atari5200": "Atari5200",
     "Atari7800": "Atari7800",
     "AtariLynx": "AtariLynx",
-    "TG16": "TG16",
-    "WS": "WS",
-    "Coleco": "Coleco",
 }
 
 REGION_PATTERNS = {

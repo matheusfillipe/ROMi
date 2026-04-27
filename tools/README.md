@@ -8,14 +8,10 @@ Python scripts for generating ROM databases from ROM archives.
 
 Fetches ROM listings from archive.org No-Intro/Redump collections. This replaces the Myrient indexer since Myrient shut down on March 31, 2026.
 
-**Working platforms** (direct HTTP downloads confirmed):
+**Supported platforms** (matching ROMi's built-in platform list):
 - **Nintendo**: NES, SNES, GB, GBC, GBA
-- **Sega**: Genesis, SMS, Game Gear, 32X
+- **Sega**: Genesis, SMS
 - **Atari**: 2600, 5200, 7800, Lynx
-- **Other**: TurboGrafx-16, WonderSwan, ColecoVision
-
-**Disc-based platforms** (included for database completeness, but files are private on archive.org):
-- PS1, PS2, PS3, PSP — downloads will fail until archive.org makes them public
 
 ### myrient_indexer.py (Legacy)
 
