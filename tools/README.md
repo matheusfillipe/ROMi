@@ -12,6 +12,7 @@ Fetches ROM listings from archive.org No-Intro/Redump collections. This replaces
 - **Nintendo**: NES, SNES, GB, GBC, GBA
 - **Sega**: Genesis, SMS
 - **Atari**: 2600, 5200, 7800, Lynx
+- **Sony**: PSX (partial — 278 games from NTSC-U M+S Redump subcollections)
 
 ### myrient_indexer.py (Legacy)
 

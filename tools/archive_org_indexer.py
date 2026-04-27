@@ -111,6 +111,17 @@ PLATFORM_SOURCES = {
         "skip_prefixes": [],
     },
 
+    # --- Disc-based (Redump) ---
+    # NOTE: Most PS1/PS2/PS3/PSP files are private on archive.org.
+    # PS1 has two public subcollections: NTSC-U-M and NTSC-U-S.
+    # Downloads are larger (hundreds of MB per game) and use .zip format.
+    "PSX": {
+        "item": "Redump.orgSonyPlayStation-NTSC-U-M",
+        "ext": ".zip",
+        "subdir": None,
+        "skip_prefixes": [],
+        "extra_items": ["Redump.orgSonyPlayStation-NTSC-U-S"],
+    },
 
 }
 
