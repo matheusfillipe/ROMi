@@ -51,7 +51,7 @@ jobs:
           mkdir -p release_databases
           cd tools
 
-          ARGS="--deduplicate --exclude-variants --compact-urls"
+          ARGS="--deduplicate --exclude-variants --full-urls"
           ARGS="$ARGS --region-priority World,USA,EUR,JPN,ASA,Unknown"
           ARGS="$ARGS --output ../release_databases"
 
@@ -63,8 +63,8 @@ jobs:
             ARGS="$ARGS --platform ${{ inputs.platforms }}"
           fi
 
-          echo "Running: python myrient_indexer.py $ARGS"
-          python myrient_indexer.py $ARGS
+          echo "Running: python archive_org_indexer.py $ARGS"
+          python archive_org_indexer.py $ARGS
           cp index.html ../release_databases/
 
       - name: Generate combined database for online mode
@@ -86,7 +86,7 @@ jobs:
           echo "Generated combined database file: $(wc -l < $COMBINED_DB) entries"
 
           # Also keep individual files for offline package
-          # Create sources.txt with full Myrient URLs for offline mode
+          # Copy sources.txt for offline mode
           cp tools/sources.txt release_databases/sources.txt
           echo "Copied sources.txt for offline package."
 
