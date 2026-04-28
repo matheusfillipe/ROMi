@@ -1,156 +1,116 @@
 # ROMi Database Indexer
 
-Python script for generating ROM databases from Myrient ROM archives.
+Python scripts for generating ROM databases from ROM archives.
 
-## ⚠️ Important Notes
+## Indexers
 
-- **Testing tool only** - For developers and advanced users
-- **Not endorsed by Myrient** - This tool scrapes publicly available listings but is not officially supported
-- **No guarantees** - Downloads may be slow, fail, or become unavailable at any time
-- **Use responsibly** - Respect Myrient's bandwidth and terms of service
+### archive_org_indexer.py (Recommended)
 
-## Proxy Recommendation
+Fetches ROM listings from archive.org No-Intro/Redump collections. This replaces the Myrient indexer since Myrient shut down on March 31, 2026.
 
-**Using a proxy with Myrient downloads is highly recommended** for improved speeds and reliability. Myrient's CDN can be rate-limited or slow from certain regions.
+**Supported platforms** (matching ROMi's built-in platform list):
+- **Nintendo**: NES, SNES, GB, GBC, GBA
+- **Sega**: Genesis, SMS
+- **Atari**: 2600, 5200, 7800, Lynx
+- **Sony**: PSX (partial — 278 games from NTSC-U M+S Redump subcollections)
 
-Configure proxy in ROMi's `config.txt`:
+### myrient_indexer.py (Legacy)
+
+**No longer functional** — Myrient (myrient.erista.me) shut down on March 31, 2026. Kept for reference.
+
+## Installation
+
+```bash
+pip install aiohttp
+```
+
+## Basic Usage
+
+```bash
+# Fetch all working cartridge platforms
+python archive_org_indexer.py --deduplicate --exclude-variants --full-urls
+
+# Fetch specific platform(s)
+python archive_org_indexer.py --platform NES,SNES,GB,GBC,GBA
+
+# Limit entries per platform (for testing)
+python archive_org_indexer.py --platform NES --per-platform 10
+```
+
+## URL Modes
+
+```bash
+# Full URLs (recommended) — complete archive.org URLs, no sources.txt needed
+python archive_org_indexer.py --full-urls
+
+# Compact URLs — filename only, requires sources.txt on PS3
+python archive_org_indexer.py --compact-urls
+```
+
+## Deduplication & Filtering
+
+```bash
+# Enable deduplication (removes regional duplicates)
+python archive_org_indexer.py --deduplicate
+
+# Exclude demos, prototypes, betas, pirates
+python archive_org_indexer.py --exclude-variants
+
+# Custom region priority
+python archive_org_indexer.py --deduplicate --region-priority "World,USA,EUR,JPN,ASA,Unknown"
+
+# Filter by game name
+python archive_org_indexer.py --name-filter "Street Fighter" --per-platform 5
+```
+
+## Production Build
+
+```bash
+# Generate production databases
+python archive_org_indexer.py \
+  --deduplicate \
+  --exclude-variants \
+  --full-urls
+```
+
+## Using Generated Databases
+
+### Offline (Local TSV Files)
+
+1. Copy generated `romi_*.tsv` files to PS3: `/dev_hdd0/game/ROMI00001/USRDIR/`
+2. ROMi loads per-platform files automatically (e.g., `romi_NES.tsv`, `romi_GBA.tsv`)
+3. Alternatively, copy `romi_db.tsv` (combined) — ROMi loads this first if present
+
+### Online (Remote TSV)
+
+Host `romi_db.tsv` on GitHub Pages or any static host, then configure ROMi:
+```ini
+url https://yourhost.github.io/your-repo/romi_db.tsv
+```
+
+## Database Format
+
+TSV (Tab-Separated Values), 5 columns:
+```
+Platform    Region    Name    URL_or_Filename    Size_in_bytes
+NES         USA       Super Mario Bros.    https://archive.org/.../file.zip    262144
+```
+
+When using `sources.txt`, column 4 is just a filename and the base URL is prepended at download time.
+
+## Proxy Configuration
+
+Configure in ROMi's `config.txt`:
 ```ini
 proxy_url http://your-proxy:8080
 proxy_user username         # optional
 proxy_pass password         # optional
 ```
 
-ROMi automatically falls back to direct connection if the proxy fails.
-
-## Installation
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Or use the included virtual environment
-.venv/bin/python myrient_indexer.py
-```
-
-## Basic Usage
-
-```bash
-# Fetch all platforms
-python myrient_indexer.py
-
-# Fetch specific platform(s)
-python myrient_indexer.py --platform PSX
-python myrient_indexer.py --platform NES,SNES,GB,GBC,GBA
-
-# Limit entries per platform (for testing)
-python myrient_indexer.py --platform PS2 --per-platform 10
-```
-
-## Deduplication
-
-Deduplication reduces database size by removing regional duplicates. **Users should evaluate and classify games themselves** - the tool uses region priority as a heuristic only.
-
-```bash
-# Enable deduplication with default priority (World > USA > EUR > JPN > ASA)
-python myrient_indexer.py --deduplicate
-
-# Custom region priority
-python myrient_indexer.py --deduplicate --region-priority "World,EUR,USA,JPN,ASA,Unknown"
-
-# Exclude demos, prototypes, betas
-python myrient_indexer.py --deduplicate --exclude-variants
-```
-
-## Filtering (Testing)
-
-```bash
-# Filter by game name
-python myrient_indexer.py --name-filter "Street Fighter" --per-platform 5
-
-# Test specific game deduplication
-python myrient_indexer.py --platform PS3 --name-filter "Grand Theft Auto V" --deduplicate
-```
-
-## Output Options
-
-```bash
-# Custom output directory
-python myrient_indexer.py --output ./my_databases
-
-# Compact URLs (filename only, requires sources.txt)
-python myrient_indexer.py --compact-urls
-```
-
-## Production Workflow
-
-The GitHub Actions workflow generates databases weekly:
-
-```bash
-# Equivalent to automated workflow
-python myrient_indexer.py \
-  --deduplicate \
-  --exclude-variants \
-  --compact-urls \
-  --region-priority "World,USA,EUR,JPN,ASA,Unknown" \
-  --output ../release_databases
-```
-
-## Supported Platforms
-
-- **PlayStation**: PSX, PS2, PS3
-- **Nintendo**: NES, SNES, GB, GBC, GBA
-- **Sega**: Genesis, SMS
-
-## Using Generated Databases
-
-### Option 1: Offline Package (Local TSV Files)
-
-1. Copy generated `romi_*.tsv` files to PS3: `/dev_hdd0/game/ROMI00001/USRDIR/`
-2. Copy `sources.txt` to same directory
-3. ROMi loads databases from local files
-
-### Option 2: Online Database (Remote TSV)
-
-The automated GitHub Actions workflow publishes databases to GitHub Pages:
-
-```
-https://<username>.github.io/<repo-name>/romi_db.tsv
-```
-
-Configure ROMi to load from this URL for automatic updates without rebuilding the package.
-
-See `.github/workflows/update-databases.yml` for the full automation pipeline.
-
-## Output Files
-
-- `romi_<platform>.tsv` - Platform-specific ROM databases
-- `sources.txt` - URL configuration for offline mode
-- `romi_db.tsv` - Combined database (workflow only)
-
-## Database Format
-
-TSV (Tab-Separated Values):
-```
-Platform    Region    Name    URL    Size
-PSX         USA       Final Fantasy VII    <url>    <bytes>
-```
-
 ## Troubleshooting
 
-**ModuleNotFoundError**: Install dependencies with `pip install -r requirements.txt`
+**Empty results**: Verify archive.org item IDs are accessible (some may be removed)
 
-**Connection timeout**: Myrient servers may be slow or rate-limiting requests
+**Slow downloads**: archive.org rate-limits — use `--full-urls` to avoid double-fetching
 
-**Empty results**: Check platform name spelling, verify Myrient URLs are accessible
-
-**Wrong regions selected**: Adjust `--region-priority` or disable `--deduplicate`
-
-## Disclaimer
-
-This tool accesses publicly available ROM listings from myrient.erista.me. It is:
-- **Not affiliated with or endorsed by Myrient**
-- **Provided as-is with no warranties**
-- **Subject to breakage if Myrient changes their site structure**
-- **Your responsibility to use ethically and legally**
-
-Respect Myrient's bandwidth and terms of service. Do not abuse their infrastructure.
+**500 errors**: Usually a transient archive.org CDN error — retry the request
