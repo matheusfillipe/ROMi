@@ -8,7 +8,7 @@ ROM and ISO downloader for PlayStation 3 - A PKGi adaptation for retro gaming.
 ## Features
 
 - Multi-platform ROM downloads (PSX, PS2, PS3, NES, SNES, GB, GBC, GBA, Genesis, SMS)
-- Integrated with Myrient ROM archive (No-Intro, Redump)
+- Integrated with archive.org ROM archive (No-Intro, Redump)
 - Multiple storage device support (HDD, USB 0-7, NTFS 0-7)
 - RetroArch ROM organization by platform
 - Background music with 9 language translations
@@ -88,7 +88,7 @@ ROMs are automatically organized by platform:
 
 ## Database Generation
 
-ROMi uses TSV databases generated from Myrient ROM archives. See [tools/README.md](tools/README.md) for the myrient indexer documentation and database generation instructions.
+ROMi uses TSV databases generated from archive.org No-Intro/Redump collections. See [tools/README.md](tools/README.md) for the indexer documentation and database generation instructions.
 
 ## Building
 
@@ -125,7 +125,7 @@ make ps3-deploy PS3_IP=192.168.1.100
 ## Credits
 
 - Fork of [PKGi PS3](https://github.com/bucanero/pkgi-ps3) by bucanero
-- ROM databases: [Myrient](https://myrient.erista.me/) (No-Intro, Redump)
+- ROM databases: [archive.org](https://archive.org) (No-Intro, Redump)
 - PS3 toolchain: PSL1GHT, ps3dev
 - Libraries: libcurl, mini18n, ya2d, mbedTLS
 
