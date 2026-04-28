@@ -1382,7 +1382,7 @@ void romi_curl_init(CURL *curl)
 {
     static struct curl_slist *headers = NULL;
 
-    // Mimic wget headers exactly - Myrient whitelists wget/curl
+    // Mimic wget headers for HTTP download compatibility
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Wget/1.24");
 
     // Match wget's minimal headers
@@ -1537,7 +1537,7 @@ romi_http* romi_http_get(const char* url, const char* content, uint64_t offset, 
     }
     curl_easy_setopt(http->curl, CURLOPT_URL, url);
 
-    // NOTE: No Referer header - plain curl doesn't send it, and Myrient rate-limits browser-like requests
+    // NOTE: No Referer header - plain curl doesn't send it
 
     LOG("starting http GET request for %s", url);
 

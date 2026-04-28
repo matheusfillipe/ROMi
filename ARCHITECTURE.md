@@ -8,8 +8,9 @@ A PKGi-style ROM downloader for jailbroken PS3 that downloads ROMs from HTTP sou
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Myrient Indexer (PC)                   │
-│  Python script that crawls myrient, generates TSV DBs   │
+│                 archive.org Indexer (PC)                  │
+│  Python script fetches archive.org metadata, generates  │
+│  TSV DBs. Runs via GitHub Actions or manual.            │
 │  Runs: cron job, GitHub Actions, or manual              │
 └───────────────────────┬─────────────────────────────────┘
                         │ uploads
@@ -45,9 +46,9 @@ A PKGi-style ROM downloader for jailbroken PS3 that downloads ROMs from HTTP sou
 
 ```
 PLATFORM	REGION	NAME	URL	SIZE
-PSX	USA	Crash Bandicoot	https://myrient.erista.me/files/...	123456789
-PS2	EUR	Gran Turismo 4	https://myrient.erista.me/files/...	4500000000
-NES	USA	Super Mario Bros	https://myrient.erista.me/files/...	24576
+PSX	USA	Crash Bandicoot	https://archive.org/download/...	123456789
+NES	USA	Super Mario Bros	https://archive.org/download/...	24576
+GBA	USA	Advance Wars	https://archive.org/download/...	5242880
 ```
 
 ## PS3 App Modules
@@ -195,8 +196,8 @@ romi_snprintf(text, sizeof(text), "%s %s", _("Press"), _("to continue"));
 
 ## Data Source
 
-Primary: https://myrient.erista.me/files/
-- No-Intro: Cartridge-based ROMs (NES, SNES, GB, GBA, Genesis, etc.)
-- Redump: Disc-based games (PSX, PS2, PS3, GameCube, etc.)
+Primary: https://archive.org/
+- No-Intro: Cartridge-based ROMs (NES, SNES, GB, GBC, GBA, Genesis, SMS, Atari, etc.)
+- Redump: Disc-based games (PSX, etc.)
 
-Platform detection via regex on directory paths (e.g., "Sony - PlayStation 2" → PS2)
+See `tools/archive_org_indexer.py` for the full list of archive.org item IDs per platform.
